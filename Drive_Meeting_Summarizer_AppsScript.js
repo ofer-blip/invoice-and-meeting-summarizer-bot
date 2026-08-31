@@ -1,20 +1,8 @@
 /**
  * =========================================================================
- * סקריפט אוטומציה בענן: סיכום פגישות ישיר מ-Google Drive ומייל
- * D-Dialog Meeting Summarizer — Google Apps Script (Cloud)
+ * אפליקציית ענן ווב: סיכום פגישות ישיר מ-Google Drive ומייל
+ * D-Dialog Meeting Summarizer — Google Apps Script (Web App)
  * =========================================================================
- * 
- * הוראות התקנה מהירות (2 דקות):
- * 1. היכנס לכתובת: https://script.google.com
- * 2. לחץ על "פרויקט חדש" (New Project).
- * 3. מחק את מה שכתוב שם, הדבק את כל תוכן הקובץ הזה, ושמור (Ctrl+S).
- * 4. לחץ על "הפעל" (Run) בפונקציה checkAndSummarizeMeetings פעם ראשונה כדי לאשר הרשאות.
- * 5. בתפריט צד שמאל לחץ על "טריגרים" (Triggers / סמל השעון) ⬅ "הוסף טריגר":
- *    - בחר פונקציה: checkAndSummarizeMeetings
- *    - מקור אירוע: מבוסס זמן (Time-driven) ⬅ כל 5 או 10 דקות (או לפי הצורך).
- * 
- * זהו! מעכשיו כל הקלטה שתעלה מהטלפון לתיקיית 'הקלטות לפגישות' תעובד אוטומטית,
- * והסיכום יישלח אליך למייל ויישמר ב-Drive גם כשהמחשב מכובה לחלוטין!
  */
 
 // הגדרות מערכת ומפתחות
@@ -61,15 +49,97 @@ var PROMPT_MEETING_SUMMARY =
   "---\n" +
   "*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר עסקי מדויק וריווח מלא בין פסקאות.*";
 
-// Webhook Endpoints: מאפשר הפעלה מיידית מכל מקום בלחיצת קישור או Webhook
+/**
+ * מציג ממשק ווב יפהפה ואסתטי לטלפון עם כפתור הפעלה
+ */
 function doGet(e) {
-  checkAndSummarizeMeetings();
-  return ContentService.createTextOutput("✓ סנכרון וסיכום הפגישות בוצע בהצלחה!").setMimeType(ContentService.MimeType.TEXT);
+  var html = '<!DOCTYPE html>' +
+    '<html lang="he" dir="rtl">' +
+    '<head>' +
+    '  <meta charset="UTF-8">' +
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">' +
+    '  <title>סיכום פגישות - D-Dialog</title>' +
+    '  <style>' +
+    '    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }' +
+    '    body { background: #0F172A; color: #F8FAFC; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; direction: rtl; text-align: center; }' +
+    '    .card { background: #1E293B; border: 1px solid #334155; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }' +
+    '    .logo-badge { width: 64px; height: 64px; background: linear-gradient(135deg, #3B82F6, #1D4ED8); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4); }' +
+    '    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #FFFFFF; }' +
+    '    p.desc { font-size: 14px; color: #94A3B8; margin-bottom: 28px; line-height: 1.5; }' +
+    '    .action-btn {' +
+    '      width: 100%; padding: 18px 20px; font-size: 18px; font-weight: 700; color: #FFFFFF;' +
+    '      background: linear-gradient(135deg, #2563EB, #1D4ED8); border: none; border-radius: 16px;' +
+    '      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);' +
+    '      display: flex; align-items: center; justify-content: center; gap: 10px;' +
+    '    }' +
+    '    .action-btn:active { transform: scale(0.98); opacity: 0.9; }' +
+    '    .action-btn:disabled { background: #475569; color: #94A3B8; cursor: not-allowed; transform: none; box-shadow: none; }' +
+    '    #status-box { margin-top: 24px; padding: 14px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; display: none; }' +
+    '    .status-running { background: rgba(59, 130, 246, 0.15); border: 1px solid #3B82F6; color: #93C5FD; display: block !important; }' +
+    '    .status-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; color: #6EE7B7; display: block !important; }' +
+    '    .status-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; color: #FCA5A5; display: block !important; }' +
+    '    .steps { margin-top: 28px; padding-top: 20px; border-top: 1px solid #334155; text-align: right; }' +
+    '    .steps h3 { font-size: 13px; color: #64748B; margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }' +
+    '    .step-item { font-size: 13px; color: #CBD5E1; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 8px; }' +
+    '    .step-num { width: 18px; height: 18px; background: #334155; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #94A3B8; flex-shrink: 0; margin-top: 2px; }' +
+    '  </style>' +
+    '</head>' +
+    '<body>' +
+    '  <div class="card">' +
+    '    <div class="logo-badge">🎙️</div>' +
+    '    <h1>סיכום פגישות AI</h1>' +
+    '    <p class="desc">סנכרון הקלטות מ-Google Drive, הפקת סיכום מובנה ושליחה ישירה למייל.</p>' +
+    '    ' +
+    '    <button id="runBtn" class="action-btn" onclick="startProcess()">' +
+    '      <span>🎙️</span> <span>סכם פגישות עכשיו</span>' +
+    '    </button>' +
+    '    ' +
+    '    <div id="status-box"></div>' +
+    '    ' +
+    '    <div class="steps">' +
+    '      <h3>איך זה עובד?</h3>' +
+    '      <div class="step-item"><span class="step-num">1</span> <span>מעלים הקלטה מהטלפון לתיקיית <strong>"הקלטות לפגישות"</strong> ב-Drive.</span></div>' +
+    '      <div class="step-item"><span class="step-num">2</span> <span>לוחצים על הכפתור הכחול למעלה.</span></div>' +
+    '      <div class="step-item"><span class="step-num">3</span> <span>הסיכום המלא נוחת אצלך במייל וב-Drive תוך שניות!</span></div>' +
+    '    </div>' +
+    '  </div>' +
+    '  <script>' +
+    '    function startProcess() {' +
+    '      var btn = document.getElementById("runBtn");' +
+    '      var box = document.getElementById("status-box");' +
+    '      btn.disabled = true;' +
+    '      btn.innerHTML = "<span>⏳</span> <span>מעבד הקלטות... אנא המתן</span>";' +
+    '      box.className = "status-running";' +
+    '      box.innerHTML = "🔍 סורק את Google Drive ומעבד את ההקלטה ב-Gemini... (אורך כ-30 שניות)";' +
+    '      ' +
+    '      google.script.run' +
+    '        .withSuccessHandler(function(res) {' +
+    '          btn.disabled = false;' +
+    '          btn.innerHTML = "<span>🎙️</span> <span>סכם פגישות שוב</span>";' +
+    '          box.className = "status-success";' +
+    '          box.innerHTML = "✅ " + res;' +
+    '        })' +
+    '        .withFailureHandler(function(err) {' +
+    '          btn.disabled = false;' +
+    '          btn.innerHTML = "<span>🔄</span> <span>נסה שוב</span>";' +
+    '          box.className = "status-error";' +
+    '          box.innerHTML = "❌ שגיאה: " + err;' +
+    '        })' +
+    '        .checkAndSummarizeMeetings();' +
+    '    }' +
+    '  </script>' +
+    '</body>' +
+    '</html>';
+    
+  return HtmlService.createHtmlOutput(html)
+    .setTitle("D-Dialog | סיכום פגישות")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, user-scalable=no');
 }
 
 function doPost(e) {
-  checkAndSummarizeMeetings();
-  return ContentService.createTextOutput("✓ סנכרון וסיכום הפגישות בוצע בהצלחה!").setMimeType(ContentService.MimeType.TEXT);
+  var result = checkAndSummarizeMeetings();
+  return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.TEXT);
 }
 
 function checkAndSummarizeMeetings() {
@@ -81,13 +151,13 @@ function checkAndSummarizeMeetings() {
   
   var files = inputFolder.getFiles();
   var processedCount = 0;
+  var lastFileName = "";
   
   while (files.hasNext()) {
     var file = files.next();
     var fileName = file.getName();
     var mimeType = file.getMimeType();
     
-    // Check if it's an audio or video file
     var lowerName = fileName.toLowerCase();
     var isAudio = lowerName.endsWith('.m4a') || lowerName.endsWith('.mp3') || lowerName.endsWith('.wav') || 
                   lowerName.endsWith('.aac') || lowerName.endsWith('.ogg') || lowerName.endsWith('.mp4') || 
@@ -98,6 +168,7 @@ function checkAndSummarizeMeetings() {
     }
     
     Logger.log("מעבד הקלטה: " + fileName + " (" + (file.getSize() / (1024*1024)).toFixed(2) + " MB)");
+    lastFileName = fileName;
     
     try {
       // 1. Prepare Base64 audio payload for Gemini
@@ -178,14 +249,18 @@ function checkAndSummarizeMeetings() {
       
     } catch (e) {
       Logger.log("❌ שגיאה בעיבוד " + fileName + ": " + e.toString());
+      return "שגיאה בעיבוד הקובץ: " + e.toString();
     }
   }
   
-  Logger.log("סיום ריצה: עובדו " + processedCount + " הקלטות.");
+  if (processedCount === 0) {
+    return "לא נמצאו הקלטות חדשות בתיקיית 'הקלטות לפגישות'. אנא העלה הקלטה ל-Drive ולחץ שוב.";
+  }
+  
+  return "הסנכרון הושלם בהצלחה! עובדו " + processedCount + " הקלטות. הסיכום נשלח למייל ונשמר ב-Drive.";
 }
 
 function buildHtmlDocument(markdown, fileName) {
-  // Convert Markdown syntax to styled HTML
   var html = markdown
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
