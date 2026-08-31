@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מדריך התקנה טכני - בוט החשבוניות D-Dialog</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 850px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 45px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        h1 {
+            color: #0f172a;
+            font-size: 26px;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 12px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #1e3a8a;
+            font-size: 18px;
+            margin-top: 30px;
+            background-color: #eff6ff;
+            padding: 8px 15px;
+            border-right: 4px solid #3b82f6;
+            border-radius: 0 4px 4px 0;
+        }
+        p, li {
+            font-size: 14.5px;
+            color: #475569;
+        }
+        .code-block {
+            background-color: #0f172a;
+            color: #38bdf8;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: Consolas, monospace;
+            font-size: 13.5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            direction: ltr;
+            text-align: left;
+        }
+        .step-num {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-left: 8px;
+            font-size: 13px;
+        }
+        .list-item {
+            margin-bottom: 12px;
+        }
+        code {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Consolas, monospace;
+            font-size: 13.5px;
+        }
+        .warning-box {
+            background-color: #fff7ed;
+            border-right: 4px solid #ea580c;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>מדריך התקנה טכני - בוט החשבוניות D-Dialog</h1>
+    <p><strong>מיועד עבור:</strong> עופר (Ofer) לצורך ביצוע התקנה והטמעה מלאה במחשב של שחף מיכאל.</p>
+
+    <h2>דרישות קדם והתקנת סביבה</h2>
+    <div class="list-item">
+        <span class="step-num">1</span> 
+        <strong>התקנת Python:</strong> ודא שמותקן Python 3.9 ומעלה (מומלץ 3.11 או 3.12). 
+        <br><span style="color: #ea580c; font-weight: bold;">חשוב מאוד:</span> במהלך התקנת ה-Installer של פייתון בווינדוס, יש לסמן ב-V את התיבה <strong>"Add Python to PATH"</strong>.
+    </div>
+    <div class="list-item">
+        <span class="step-num">2</span> 
+        <strong>התקנת חבילות קוד (Dependencies):</strong> פתח את ה-CMD בתיקיית הפרויקט המקורית והרצ:
+        <div class="code-block">pip install -r requirements.txt</div>
+        החבילות העיקריות המותקנות: <code>google-api-python-client</code>, <code>google-auth-oauthlib</code>, <code>google-genai</code>, <code>reportlab</code>, <code>pydantic</code>.
+    </div>
+
+    <h2>הגדרת פרויקט Google Cloud (עבור שחף)</h2>
+    <p>יש ליצור פרויקט גישה ייעודי כדי לקבל את קובץ הרישיון המקורי:</p>
+    <ol>
+        <li>היכנס ל- <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> באמצעות חשבון הגוגל של שחף.</li>
+        <li>צור פרויקט חדש בשם <code>Shachaf-Invoice-Bot</code>.</li>
+        <li>עבור ל-<strong>APIs & Services -> Library</strong> והפעל (Enable) את שלושת ה-APIs הבאים:
+            <ul>
+                <li><strong>Gmail API</strong></li>
+                <li><strong>Google Drive API</strong></li>
+                <li><strong>Google Sheets API</strong></li>
+            </ul>
+        </li>
+        <li>עבור ל-<strong>OAuth consent screen</strong>:
+            <ul>
+                <li>בחר ב-<strong>External</strong> ולחץ על Create.</li>
+                <li>מלא את פרטי האפליקציה (שם, מייל תמיכה ומייל מפתח - כולם של שחף).</li>
+                <li>בשלב ה-<strong>Scopes</strong>, לחץ על Add Scopes והוסף ידנית את הגישות הבאות:
+                    <br><code>https://www.googleapis.com/auth/gmail.readonly</code> (לקריאת מיילים)
+                    <br><code>https://www.googleapis.com/auth/gmail.send</code> (לשליחת מייל הסיכום בסיום)
+                    <br><code>https://www.googleapis.com/auth/drive</code> (ליצירה ועריכת קבצים ותיקיות בדרייב)
+                </li>
+                <li>בשלב ה-<strong>Test Users</strong>, לחץ על Add Users והוסף את <strong>כתובת הג'ימייל של שחף</strong> (המייל שייסרק).</li>
+            </ul>
+        </li>
+        <li>עבור ללשונית <strong>Credentials</strong>:
+            <ul>
+                <li>לחץ על <strong>Create Credentials</strong> ובחר ב-<strong>OAuth client ID</strong>.</li>
+                <li>בחר בסוג אפליקציה: <strong>Desktop Application</strong>.</li>
+                <li>הורד את קובץ ה-JSON שנוצר (Download JSON).</li>
+                <li>שמור את הקובץ בתיקיית הבוט ושנה את שמו ל-<code>credentials.json</code>.</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h2>הגדרת Gemini AI והגדרות פנימיות</h2>
+    <ol>
+        <li>היכנס ל- <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> בחשבון של שחף.</li>
+        <li>לחץ על <strong>Get API key</strong> וצור מפתח API חדש.</li>
+        <li>פתח את הקובץ <code>config.py</code> בתיקיית הבוט והזן את הערכים הבאים:
+            <ul>
+                <li><code>GEMINI_API_KEY = 'הכנס_את_המפתח_של_שחף_כאן'</code></li>
+                <li><code>NOTIFICATION_EMAIL_RECIPIENT = 'מייל_היעד_של_שחף_לקבלת_דוחות'</code> (אם יישאר ריק, הבוט ישלח אוטומטית למייל המחובר של שחף עצמו).</li>
+                <li><code>PARENT_FOLDER_ID = ''</code> (אם ברצונך שכל תיקיות החשבוניות והאקסלים החודשיים ייווצרו בתוך תיקיית-על ספציפית בדרייב שלו, צור תיקייה בדרייב שלו, העתק את ה-ID שלה מכתובת ה-URL והדבק אותו כאן. אם יישאר ריק, התיקיות ייווצרו בתיקיית השורש של הדרייב).</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h2>אימות ראשוני (Authentication Run)</h2>
+    <div class="warning-box">
+        <strong>שים לב:</strong> הריצה הראשונה חייבת להתבצע באופן ידני כדי לבצע את ה-OAuth flow בדפדפן.
+    </div>
+    <ol>
+        <li>הרצ את הקובץ <code>Run_Bot.bat</code> (או הרצ ב-CMD: <code>python main.py</code>).</li>
+        <li>ייפתח דפדפן במחשב שיבקש להתחבר לחשבון הגוגל של שחף.</li>
+        <li>מכיוון שהאפליקציה בשלבי פיתוח (Testing), גוגל יציג אזהרה שהאפליקציה אינה מאומתת. יש ללחוץ על <strong>Advanced</strong> (מתקדם) ואז על <strong>Go to App (unsafe)</strong>.</li>
+        <li>אשר את הרשאות הגישה.</li>
+        <li>בסיום, הבוט יפעל ובתיקיית הבוט ייווצר קובץ קריטי בשם <code>token.json</code>. קובץ זה מכיל את הרישיון המקומי של שחף ומאפשר לבוט לרוץ מאותו רגע באופן עצמאי לחלוטין ללא שום צורך באישור דפדפן נוסף.</li>
+    </ol>
+
+    <h2>הגדרת ריצה אוטומטית (Task Scheduler - מתזמן המשימות)</h2>
+    <p>כדי שהבוט יפעל לבד ברקע בכל 1 לחודש וישלח לשחף דוח אוטומטי של החשבוניות של החודש החולף:</p>
+    <ol>
+        <li>פתח את <strong>Task Scheduler</strong> בווינדוס של שחף.</li>
+        <li>לחץ על <strong>Create Basic Task</strong>.</li>
+        <li>תן שם למשימה (לדוגמה: <code>D-Dialog Invoice Bot</code>) ולחץ על Next.</li>
+        <li>בחר ב-Trigger: <strong>Monthly</strong>.</li>
+        <li>הגדר את המשימה לפעול ביום ה-<strong>1</strong> בכל חודש, בשעה מוקדמת (לדוגמה: 08:00 בבוקר).</li>
+        <li>ב-Action, בחר ב-<strong>Start a program</strong>.</li>
+        <li>ב-Program/script לחץ על Browse ובחר בקובץ <code>Run_Bot.bat</code> בתיקיית הבוט.</li>
+        <li><span style="color: #d97706; font-weight: bold;">שלב קריטי:</span> בשדה <strong>Start in (optional)</strong>, העתק והדבק את הנתיב המלא של תיקיית הבוט (לדוגמה: <code>C:\Users\Shachaf\Desktop\shachaf_m</code>). 
+        <br><em>אם לא תגדיר שדה זה, הבוט יקרוס בריצה הרקעית כי הוא לא ידע היכן למצוא את קובץ credentials.json והספריות.</em></li>
+        <li>לחץ על Finish. המערכת מוגדרת ואוטומטית לחלוטין!</li>
+    </ol>
+
+    <div class="footer">
+        D-Dialog Technical Setup Manual &copy; 2026 | נוצר עבור עופר קאופמן
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+# ==========================================
+# Security, Tokens & Credentials (NEVER COMMIT)
+# ==========================================
+credentials.json
+token.json
+token*.json
+*.env
+.env*
+
+# ==========================================
+# Python Cache & Bytecode
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# ==========================================
+# Audio, Video & Heavy Archives
+# ==========================================
+*.m4a
+*.mp3
+*.wav
+*.aac
+*.ogg
+*.flac
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.zip
+*.tar.gz
+*.rar
+
+# ==========================================
+# Logs, Temp & OS specific
+# ==========================================
+*.log
+temp/
+.DS_Store
+Thumbs.db

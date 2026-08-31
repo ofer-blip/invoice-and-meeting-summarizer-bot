@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מדריך פשוט למשתמש - בוט החשבוניות של שחף</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #2c3e50;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+        .logo-area {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        h1 {
+            color: #1a73e8;
+            font-size: 26px;
+            margin: 5px 0;
+        }
+        h2 {
+            color: #2c3e50;
+            font-size: 19px;
+            border-bottom: 2px solid #eef2f6;
+            padding-bottom: 8px;
+            margin-top: 25px;
+        }
+        p {
+            font-size: 15px;
+            color: #4a5568;
+        }
+        .card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-weight: bold;
+            color: #1a73e8;
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .card-title span {
+            margin-left: 8px;
+            font-size: 20px;
+        }
+        .number-badge {
+            background-color: #1a73e8;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-left: 8px;
+            font-size: 14px;
+        }
+        .step-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .step-text {
+            flex: 1;
+            font-size: 14.5px;
+            color: #4a5568;
+        }
+        .alert-box {
+            background-color: #e8f0fe;
+            border-right: 4px solid #1a73e8;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14.5px;
+            margin: 20px 0;
+        }
+        .trouble-box {
+            background-color: #fffaf0;
+            border-right: 4px solid #dd6b20;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14.5px;
+            margin-bottom: 15px;
+        }
+        .trouble-title {
+            font-weight: bold;
+            color: #dd6b20;
+            margin-bottom: 5px;
+        }
+        ul {
+            padding-right: 20px;
+            margin: 5px 0;
+        }
+        li {
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #a0aec0;
+            border-top: 1px solid #edf2f7;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-area">
+        <span style="font-size: 45px;">📂</span>
+        <h1>שלום שחף!</h1>
+        <p style="font-size: 16px; margin: 5px 0; color: #718096;">מדריך פשוט להפעלת בוט ריכוז החשבוניות שלך</p>
+    </div>
+
+    <p>
+        הבוט החכם שלך נועד לחסוך לך עבודה ידנית יקרה. הוא סורק את המייל באופן אוטומטי, אוסף את החשבוניות והקבלות שקיבלת, ומארגן אותן בטבלה מסודרת ובתיקייה ב-Google Drive.
+    </p>
+
+    <h2>📋 איך המערכת עובדת בשוטף?</h2>
+    
+    <div class="card">
+        <div class="step-row">
+            <div class="number-badge">1</div>
+            <div class="step-text">
+                <strong>מעבירים חשבוניות למייל:</strong><br>
+                בכל פעם שאתה מקבל חשבונית (או קבלה) במייל האישי שלך, או כקובץ ב-WhatsApp, פשוט בצע לה <strong>העברה (Forward)</strong> לתיבת המייל המרכזת שסוכמה מראש.
+            </div>
+        </div>
+        
+        <div class="step-row" style="margin-top: 15px;">
+            <div class="number-badge">2</div>
+            <div class="step-text">
+                <strong>הסריקה האוטומטית:</strong><br>
+                בכל 1 לחודש, המערכת תרוץ לבדה ברקע באופן אוטומטי. היא תאסוף את כל החשבוניות של החודש הקודם, תמיין אותן לתיקיות, ותשלח אליך מייל סיכום מפורט עם קישור ישיר לטבלה המרכזת.
+            </div>
+        </div>
+    </div>
+
+    <h2>גוגל דרייב ודוחות (איפה הכל נשמר?)</h2>
+    <p>המערכת מייצרת עבורך בתוך ה-Google Drive שתי תיקיות מרכזיות:</p>
+    <ul>
+        <li>📁 <strong>תיקיות חשבוניות חודשיות</strong> - שם יישמרו קבצי ה-PDF המקוריים ממוינים לפי חודש (למשל: "חשבוניות 2026-08").</li>
+        <li>📊 <strong>קבצי גוגל שיטס (אקסל)</strong> - טבלה חודשית מובנית המרכזת את התאריך, שם הספק, מספר המסמך, הסכום והמטבע, יחד עם קישור ישיר לצפייה מהירה בקובץ. בתחתית הטבלה מופיע סכום הסה"כ שמתעדכן מעצמו!</li>
+    </ul>
+
+    <div class="alert-box">
+        💡 <strong>טיפ חכם:</strong> הבוט יודע לזהות את תאריך החשבונית המקורי. לדוגמה, אם קיבלת חשבונית ב-10 לאוגוסט אך היא שייכת לטיפול שבוצע ביולי, הבוט ימיין אותה אוטומטית לתיקיית יולי ויעדכן את דוח יולי!
+    </div>
+
+    <h2>🚀 איך מריצים באופן ידני (אם רוצים)?</h2>
+    <p>אם אתה רוצה להפיק דוח כאן ועכשיו מבלי להמתין ל-1 לחודש:</p>
+    <div class="card" style="background-color: #ebf8ff; border-color: #bee3f8;">
+        <div class="step-row">
+            <div class="number-badge">א</div>
+            <div class="step-text">לחץ לחיצה כפולה על קובץ הקיצור שעל שולחן העבודה: <strong>Run_Bot.bat</strong>.</div>
+        </div>
+        <div class="step-row" style="margin-top: 8px;">
+            <div class="number-badge">ב</div>
+            <div class="step-text">ייפתח חלון גרפי קטן ונוח על המסך.</div>
+        </div>
+        <div class="step-row" style="margin-top: 8px;">
+            <div class="number-badge">ג</div>
+            <div class="step-text">בחר את סוג הריצה (חודש קודם אוטומטי, חודש נוכחי, או חודש ספציפי לבחירתך) ולחץ על כפתור <strong>"הפעל בוט סריקה"</strong>. בסיום תופיע הודעת אישור!</div>
+        </div>
+    </div>
+
+    <h2>❓ מה עושים אם משהו לא עובד? (פתרון בעיות קל)</h2>
+
+    <div class="trouble-box">
+        <div class="trouble-title">דף אינטרנט של גוגל נפתח ומבקש הרשאה</div>
+        <p>
+            אל דאגה, זה תקין לחלוטין וקורה בעיקר בריצה הראשונה או אם ההרשאות מתעדכנות. 
+            פשוט התחבר לחשבון הגוגל שלך בדפדפן, לחץ על <strong>המשך (Advanced)</strong> ולאחר מכן על <strong>מעבר לאפליקציה (Go to App)</strong> ואשר את הגישה.
+        </p>
+    </div>
+
+    <div class="trouble-box">
+        <div class="trouble-title">המחשב לא מחובר לאינטרנט</div>
+        <p>המערכת זקוקה לחיבור אינטרנט פעיל כדי לגשת למייל ולדרייב. ודא שהמחשב מחובר לרשת לפני הרצת הבוט.</p>
+    </div>
+
+    <div class="trouble-box">
+        <div class="trouble-title">לא מצאתי חשבונית מסוימת בטבלה</div>
+        <p>
+            ודא שביצעת העברה (Forward) למייל של הבוט. הבוט מתעלם אוטומטית מפרסומות, ניוזלטרים וטעינות רב-קו קטנות כדי לשמור על טבלה נקייה מרעשים.
+        </p>
+    </div>
+
+    <div class="footer">
+        D-Dialog &copy; 2026 | מופק באהבה עבור שחף מיכאל
+    </div>
+</div>
+
+</body>
+</html>
