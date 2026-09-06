@@ -54,7 +54,8 @@ var PROMPT_MEETING_SUMMARY = "אתה עוזר מקצועי לניהול, תמל�
 "---\n" +
 "*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר מדויק וריווח מלא בין פסקאות.*";
 
-// פרטי מיתוג ויוצר (D-Dialog)
+// פרטי מיתוג וגרסה (D-Dialog)
+var APP_VERSION = "v2.1";
 var BRAND_NAME = "D-Dialog";
 var BRAND_TAGLINE = "אוטומציה וסוכני AI מתקדמים לעסקים";
 var BRAND_WEBSITE = "https://ddialog.co.il";
@@ -158,7 +159,7 @@ function doGet(e) {
     '    <div class="logo-container">' +
     '      <img src="' + APP_ICON_BASE64 + '" alt="D-Dialog Meeting AI" class="logo-img">' +
     '    </div>' +
-    '    <h1>בוט סיכום פגישות AI</h1>' +
+    '    <h1>בוט סיכום פגישות AI <span style="font-size:11px;background:#0284C7;color:#FFFFFF;padding:3px 8px;border-radius:10px;vertical-align:middle;font-weight:600;margin-right:6px;">' + APP_VERSION + '</span></h1>' +
     '    <p class="desc">סנכרון הקלטות מ-Google Drive, תמלול חכם ב-Gemini והפקת סיכום מנהלים מובנה ישירות למייל.</p>' +
     '    ' +
     '    <select id="clientSelect" class="client-select">' +
@@ -183,7 +184,7 @@ function doGet(e) {
     '    <div class="brand-footer">' +
     '      <div class="brand-meta">' +
     '        <div class="brand-icon">⚡</div>' +
-    '        <div class="brand-title">פותח על ידי <strong>' + BRAND_NAME + '</strong></div>' +
+    '        <div class="brand-title">פותח על ידי <strong>' + BRAND_NAME + '</strong> <span style="color:#64748B;font-size:11px;">(' + APP_VERSION + ')</span></div>' +
     '      </div>' +
     '      <div class="brand-sub">' + BRAND_TAGLINE + '</div>' +
     '      <div class="brand-links">' +
