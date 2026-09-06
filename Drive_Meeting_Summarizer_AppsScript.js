@@ -163,9 +163,9 @@ function doGet(e) {
     '    <p class="desc">סנכרון הקלטות מ-Google Drive, תמלול חכם ב-Gemini והפקת סיכום מנהלים מובנה ישירות למייל.</p>' +
     '    ' +
     '    <select id="clientSelect" class="client-select">' +
-    '      <option value="D-Dialog">📁 פרויקט: D-Dialog (פנימי)</option>' +
-    '      <option value="Gefen">🏫 לקוח: גפ"ן</option>' +
-    '      <option value="Shachaf">🏢 לקוח: שחף</option>' +
+    '      <option value="auto">✨ סיווג אוטומטי (AI)</option>' +
+    '      <option value="עסקים">🏢 עסקים (שחף, לקוחות, אוטומציות)</option>' +
+    '      <option value="גפ&quot;ן">🏫 גפ"ן (בתי ספר, חינוך, תל"א)</option>' +
     '    </select>' +
     '    ' +
     '    <button id="runBtn" class="action-btn" onclick="startProcess()">' +
@@ -325,10 +325,16 @@ function checkAndSummarizeMeetings(clientCategory) {
       
       var json = JSON.parse(response.getContentText());
       var summaryText = json.candidates[0].content.parts[0].text;
-      var category = extractCategoryFromText(summaryText);
-      var targetFolder = getOrCreateSubFolder(outputFolder, category);
       
-      Logger.log("📊 סיווג פגישה: " + category + " | תיקיית יעד: " + outputFolder.getName() + "/" + category);
+      var category = "גפ\"ן";
+      if (clientCategory && clientCategory !== "auto" && clientCategory !== "D-Dialog") {
+        category = clientCategory;
+      } else {
+        category = extractCategoryFromText(summaryText);
+      }
+      var targetFolder = getOrCreateSubFolder(baseOutputFolder, category);
+      
+      Logger.log("📊 סיווג פגישה: " + category + " | תיקיית יעד: " + baseOutputFolder.getName() + "/" + category);
       
       // 3. Build HTML Output with RTL
       var htmlContent = buildHtmlDocument(summaryText, fileName);
