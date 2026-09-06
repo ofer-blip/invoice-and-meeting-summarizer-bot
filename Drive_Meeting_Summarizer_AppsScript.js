@@ -16,6 +16,10 @@ var FOLDER_ARCHIVE_NAME = "הקלטות שעובדו";
 var FOLDER_SUB_BUSINESS = "עסקים";
 var FOLDER_SUB_GEFEN = "גפ\"ן";
 
+// שמות מסמכי הריכוז המרכזיים ב-Google Drive
+var MASTER_DOC_BUSINESS_NAME = "💼 ריכוז סיכומי פגישות עסקיות";
+var MASTER_DOC_GEFEN_NAME = "📋 ריכוז סיכומי פגישות גפ\"ן";
+
 // כתובת מייל לקבלת הסיכום (השאר ריק כדי לשלוח אוטומטית למייל שלך)
 var NOTIFICATION_EMAIL = "";
 
@@ -55,7 +59,7 @@ var PROMPT_MEETING_SUMMARY = "אתה עוזר מקצועי לניהול, תמל�
 "*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר מדויק וריווח מלא בין פסקאות.*";
 
 // פרטי מיתוג וגרסה (D-Dialog)
-var APP_VERSION = "v2.1";
+var APP_VERSION = "v2.2";
 var BRAND_NAME = "D-Dialog";
 var BRAND_TAGLINE = "אוטומציה וסוכני AI מתקדמים לעסקים";
 var BRAND_WEBSITE = "https://ddialog.co.il";
@@ -336,30 +340,44 @@ function checkAndSummarizeMeetings(clientCategory) {
       
       Logger.log("📊 סיווג פגישה: " + category + " | תיקיית יעד: " + baseOutputFolder.getName() + "/" + category);
       
-      // 3. Build HTML Output with RTL
+      // 3. Extract metadata
+      var meetingTitle = extractMeetingTitleFromSummary(summaryText, fileName);
+      var recordingDate = extractDateFromFileName(fileName) || Utilities.formatDate(new Date(), "GMT+3", "dd/MM/yyyy");
+      
+      // 4. Build HTML Output with RTL
       var htmlContent = buildHtmlDocument(summaryText, fileName);
       
-      // 4. Save to Drive Output Folder (Inside Category Subfolder)
+      // 5. Save individual files to Drive Output Folder (Inside Category Subfolder)
       var dateStr = Utilities.formatDate(new Date(), "GMT+3", "yyyy-MM-dd_HH-mm");
       var baseName = "סיכום_פגישה_" + dateStr + "_" + fileName.replace(/\.[^/.]+$/, "");
       
       targetFolder.createFile(baseName + ".html", htmlContent, MimeType.HTML);
       targetFolder.createFile(baseName + ".md", summaryText, MimeType.PLAIN_TEXT);
       
-      // Create a native Google Doc for easy editing
+      // Create a native Google Doc for this individual meeting
       var docFile = convertMarkdownToGoogleDoc(summaryText, baseName, targetFolder);
       var docUrl = docFile.getUrl();
       
-      // 5. Move original recording to Archive folder
+      // 6. Append to Master Google Doc in Drive
+      var masterDocFile = appendToMasterGoogleDoc(summaryText, category, meetingTitle, recordingDate, targetFolder);
+      var masterDocUrl = masterDocFile ? masterDocFile.getUrl() : "";
+      var masterDocLabel = (category === "עסקים") ? "💼 פתח ריכוז פגישות עסקיות" : "📋 פתח ריכוז פגישות גפ\"ן";
+      
+      // 7. Move original recording to Archive folder
       file.moveTo(archiveFolder);
       
-      // 6. Send Summary Email
+      // 8. Send Summary Email
       var recipient = NOTIFICATION_EMAIL || Session.getActiveUser().getEmail();
       var subject = "סיכום פגישה (" + category + "): " + fileName.replace(/\.[^/.]+$/, "");
       
+      var emailActionsHtml = "<div style='margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap;'>" +
+        "<a href='" + docUrl + "' style='background-color:#0EA5E9;color:white;padding:12px 20px;text-decoration:none;border-radius:10px;font-weight:bold;display:inline-block;'>📄 פתח סיכום פגישה ב-Google Docs</a>" +
+        (masterDocUrl ? " <a href='" + masterDocUrl + "' style='background-color:#059669;color:white;padding:12px 20px;text-decoration:none;border-radius:10px;font-weight:bold;display:inline-block;'>" + masterDocLabel + "</a>" : "") +
+        "</div>";
+        
       var emailHtml = htmlContent.replace(
         "<div class='meta'>", 
-        "<div style='margin-bottom: 20px;'><a href='" + docUrl + "' style='background-color:#0EA5E9;color:white;padding:10px 20px;text-decoration:none;border-radius:8px;font-weight:bold;display:inline-block;'>📄 פתח לעריכה ב-Google Docs</a></div><div class='meta'>"
+        emailActionsHtml + "<div class='meta'>"
       );
       
       // Generate PDF, name it correctly, save to Drive and attach
@@ -369,7 +387,7 @@ function checkAndSummarizeMeetings(clientCategory) {
       
       GmailApp.sendEmail(recipient, subject, summaryText, {
         htmlBody: emailHtml,
-        name: "סיכום פגישות AI",
+        name: "סיכום פגישות AI (" + BRAND_NAME + ")",
         attachments: [pdfBlob]
       });
       
@@ -600,4 +618,143 @@ function extractCategoryFromText(summaryText) {
   var businessScore = (textLower.match(/עסק|שחף|חשבונית|invoice|סוכן|פיתוח|לקוח|חברה|hubayta/g) || []).length;
   var gefenScore = (textLower.match(/גפ"ן|גפן|בית ספר|מורה|מורות|חינוך|תל"א|גוונים|רננים|אלומות|אורי/g) || []).length;
   return businessScore > gefenScore ? "עסקים" : "גפ\"ן";
+}
+
+function extractMeetingTitleFromSummary(summaryText, fallbackName) {
+  var m = summaryText.match(/^# סיכום פגישה:\s*(.+)$/m);
+  if (m && m[1]) {
+    return m[1].replace(/[\[\]]/g, "").trim();
+  }
+  return fallbackName.replace(/\.[^/.]+$/, "");
+}
+
+function appendToMasterGoogleDoc(summaryText, category, meetingTitle, dateStr, folder) {
+  try {
+    var masterDocName = (category === "עסקים") ? MASTER_DOC_BUSINESS_NAME : MASTER_DOC_GEFEN_NAME;
+    
+    // Find or create Master Google Doc in folder
+    var files = folder.getFilesByName(masterDocName);
+    var doc;
+    var isNew = false;
+    
+    if (files.hasNext()) {
+      var file = files.next();
+      doc = DocumentApp.openById(file.getId());
+    } else {
+      isNew = true;
+      doc = DocumentApp.create(masterDocName);
+      var docFile = DriveApp.getFileById(doc.getId());
+      docFile.moveTo(folder);
+      
+      var body = doc.getBody();
+      var bodyStyle = {};
+      bodyStyle[DocumentApp.Attribute.LEFT_TO_RIGHT] = false;
+      body.setAttributes(bodyStyle);
+      body.clear();
+      
+      // Add Cover Header
+      try {
+        var base64Data = APP_ICON_BASE64.replace(/^data:image\/[a-z]+;base64,/, "");
+        var imageBlob = Utilities.newBlob(Utilities.base64Decode(base64Data), MimeType.JPEG);
+        var pLogo = body.appendParagraph("");
+        pLogo.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+        var img = pLogo.appendInlineImage(imageBlob);
+        img.setWidth(70).setHeight(70);
+      } catch (e) {}
+      
+      var pTitle = body.appendParagraph(masterDocName);
+      pTitle.setHeading(DocumentApp.ParagraphHeading.HEADING1);
+      pTitle.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pTitle.setLeftToRight(false);
+      
+      var pSub = body.appendParagraph((category === "עסקים") ? 
+        "מסמך זה מאגד את כלל סיכומי פגישות העבודה, הפרוטוקולים והאוטומציות שנבנו עבור לקוחות עסקיים." :
+        "מסמך זה מאגד את כלל סיכומי פגישות העבודה והפרוטוקולים שהתקיימו במסגרת תוכניות החינוך והגפ\"ן.");
+      pSub.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      pSub.setLeftToRight(false);
+      
+      body.appendHorizontalRule();
+    }
+    
+    var body = doc.getBody();
+    
+    // Check if this meeting is already recorded in the document to prevent duplicates
+    var fullText = body.getText();
+    var checkTitle = meetingTitle || "";
+    if (checkTitle && fullText.indexOf(checkTitle) !== -1 && dateStr && fullText.indexOf(dateStr) !== -1) {
+      Logger.log("ℹ️ הפגישה כבר קיימת במסמך הריכוז: " + checkTitle);
+      return DriveApp.getFileById(doc.getId());
+    }
+    
+    // Add spacing before new entry if not brand new
+    if (!isNew) {
+      body.appendParagraph("");
+      body.appendHorizontalRule();
+      body.appendParagraph("");
+    }
+    
+    // Append formatted markdown lines
+    var lines = summaryText.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (line === '') continue;
+      
+      var p;
+      if (line.indexOf('# ') === 0) {
+        p = body.appendParagraph(line.substring(2));
+        p.setHeading(DocumentApp.ParagraphHeading.HEADING1);
+      } else if (line.indexOf('## ') === 0) {
+        p = body.appendParagraph(line.substring(3));
+        p.setHeading(DocumentApp.ParagraphHeading.HEADING2);
+      } else if (line.indexOf('### ') === 0) {
+        p = body.appendParagraph(line.substring(4));
+        p.setHeading(DocumentApp.ParagraphHeading.HEADING3);
+      } else if (line.indexOf('- [ ] ') === 0) {
+        p = body.appendListItem("⬜ " + line.substring(6));
+        p.setGlyphType(DocumentApp.GlyphType.BULLET);
+      } else if (line.indexOf('- [x] ') === 0) {
+        p = body.appendListItem("✅ " + line.substring(6));
+        p.setGlyphType(DocumentApp.GlyphType.BULLET);
+      } else if (line.indexOf('* ') === 0 || line.indexOf('- ') === 0) {
+        p = body.appendListItem(line.substring(2));
+        p.setGlyphType(DocumentApp.GlyphType.BULLET);
+      } else if (line.match(/^[0-9]+\. /)) {
+        var text = line.replace(/^[0-9]+\. /, '');
+        p = body.appendListItem(text);
+        p.setGlyphType(DocumentApp.GlyphType.NUMBER);
+      } else if (line === '---') {
+        body.appendHorizontalRule();
+        continue;
+      } else {
+        p = body.appendParagraph(line);
+      }
+      
+      p.setLeftToRight(false);
+      
+      // Bold parser
+      try {
+        var textObj = p.editAsText();
+        var textStr = textObj.getText();
+        var regex = /\*\*(.*?)\*\*/g;
+        var match;
+        var matches = [];
+        while ((match = regex.exec(textStr)) !== null) {
+          matches.push({start: match.index, inner: match[1]});
+        }
+        for (var j = matches.length - 1; j >= 0; j--) {
+          var m = matches[j];
+          textObj.deleteText(m.start, m.start + 1);
+          textObj.deleteText(m.start + m.inner.length, m.start + m.inner.length + 1);
+          textObj.setBold(m.start, m.start + m.inner.length - 1, true);
+        }
+      } catch (e) {}
+    }
+    
+    doc.saveAndClose();
+    Logger.log("✓ הפגישה נוספה בהצלחה למסמך הריכוז: " + masterDocName);
+    return DriveApp.getFileById(doc.getId());
+  } catch (err) {
+    Logger.log("⚠️ שגיאה בהוספה למסמך ריכוז: " + err.toString());
+    return null;
+  }
 }
