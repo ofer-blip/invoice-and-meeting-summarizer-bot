@@ -11,16 +11,19 @@ import config
 SUMMARIES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'summaries')
 
 PROMPT_MEETING_SUMMARY = """
-אתה עוזר מקצועי לניהול, תמלול וסיכום פגישות עסקיות ואסטרטגיות בעברית.
+אתה עוזר מקצועי לניהול, תמלול וסיכום פגישות עסקיות, פדגוגיות ואסטרטגיות בעברית.
 האזן היטב לקובץ השמע המצורף של הפגישה/השיחה, והפק סיכום מקיף, תכליתי ומסודר היטב בעברית טבעית ורהוטה.
 
-חשוב מאוד: הקפד על חלוקה מרווחת וקריאה, שבה כל נושא, החלטה ותובנה מופיעים בשורה נפרדת (ולא כגוש טקסט רציף).
+חשוב מאוד:
+1. הקפד על חלוקה מרווחת וקריאה, שבה כל נושא, החלטה ותובנה מופיעים בשורה נפרדת (ולא כגוש טקסט רציף).
+2. סווג את הפגישה במדויק בשדה הקטגוריה: 'עסקים' או 'גפ"ן'.
 
 אנא בנה את הסיכום לפי המבנה המדויק הבא:
 
 # סיכום פגישה: [נושא הפגישה המרכזי]
 
-**תאריך ושעה משוערת:** [אם מוזכר בשיחה, אחרת רשום תאריך נוכחי]
+**תאריך ושעה:** [תאריך ושעת הפגישה]
+**קטגוריה:** [עסקים / גפ"ן]
 **משתתפים/דוברים שזוהו:** [שמות הדוברים או תפקידים שזוהו במהלך השיחה]
 **נושא מרכזי:** [משפט אחד שמסביר את מהות הפגישה]
 
@@ -51,7 +54,7 @@ PROMPT_MEETING_SUMMARY = """
 * **[תובנה 2]:** [דגש, הזדמנות או נושא למעקב]
 
 ---
-*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר עסקי מדויק וריווח מלא בין פסקאות.*
+*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר מדויק וריווח מלא בין פסקאות.*
 """
 
 def get_mime_type(file_path):
@@ -307,6 +310,189 @@ def generate_html_summary(md_content, title, source_filename):
 """
     return template
 
+class SummaryResult(str):
+    category: str
+    meeting_title: str
+    date_str: str
+    md_path: str
+    html_path: str
+    summary_text: str
+
+def extract_recording_date(file_name, file_path=None):
+    """
+    Extracts date and time from filename or file metadata.
+    Supports WhatsApp format: 'WhatsApp Audio 2026-08-31 at 09.46.56'
+    Supports: '250826', '24.08.2026', '3.8.26', '2026-09-03', etc.
+    """
+    import re
+    # 1. WhatsApp format: 'WhatsApp Audio YYYY-MM-DD at HH.MM.SS'
+    m_wa = re.search(r'WhatsApp Audio (\d{4})-(\d{2})-(\d{2}) at (\d{2})\.(\d{2})', file_name, re.IGNORECASE)
+    if m_wa:
+        yyyy, mm, dd, hh, mins = m_wa.groups()
+        return f"{int(dd):02d}/{int(mm):02d}/{yyyy} {hh}:{mins}"
+        
+    m_ptt = re.search(r'PTT-(\d{4})(\d{2})(\d{2})-WA', file_name, re.IGNORECASE)
+    if m_ptt:
+        yyyy, mm, dd = m_ptt.groups()
+        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
+
+    # 2. Date with dots or dashes: YYYY-MM-DD or YYYY.MM.DD
+    m_ymd = re.search(r'(\d{4})[-_\.](\d{1,2})[-_\.](\d{1,2})', file_name)
+    if m_ymd:
+        yyyy, mm, dd = m_ymd.groups()
+        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
+
+    # 3. Date with dots or dashes: DD.MM.YYYY or DD-MM-YYYY
+    m_dmy = re.search(r'(\d{1,2})[-_\.](\d{1,2})[-_\.](\d{4})', file_name)
+    if m_dmy:
+        dd, mm, yyyy = m_dmy.groups()
+        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
+        
+    # 4. 2-digit year: DD.MM.YY (e.g. 24.08.26, 3.8.26)
+    m_dmy2 = re.search(r'(\d{1,2})[-_\.](\d{1,2})[-_\.](\d{2})\b', file_name)
+    if m_dmy2:
+        dd, mm, yy = m_dmy2.groups()
+        yyyy = f"20{yy}"
+        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
+
+    # 5. Compact 6 digits YYMMDD or DDMMYY (e.g. 250826 -> 25/08/2026)
+    m_compact = re.search(r'\b(\d{2})(\d{2})(\d{2})\b', file_name)
+    if m_compact:
+        p1, p2, p3 = m_compact.groups()
+        if int(p1) <= 31 and 1 <= int(p2) <= 12:
+            return f"{p1}/{p2}/20{p3}"
+        elif int(p3) <= 31 and 1 <= int(p2) <= 12:
+            return f"{p3}/{p2}/20{p1}"
+
+    # 6. Fallback to file creation / modified time
+    if file_path and os.path.exists(file_path):
+        mtime = os.path.getmtime(file_path)
+        return datetime.datetime.fromtimestamp(mtime).strftime('%d/%m/%Y')
+
+    return datetime.datetime.now().strftime('%d/%m/%Y')
+
+def extract_category(summary_text):
+    """Detects whether meeting category is 'עסקים' or 'גפ\"ן'."""
+    text_lower = summary_text.lower()
+    for line in summary_text.splitlines():
+        if "**קטגוריה:**" in line:
+            if "עסק" in line:
+                return "עסקים"
+            elif "גפ" in line or "חינוך" in line:
+                return "גפ\"ן"
+                
+    # Heuristic scoring fallback
+    business_keywords = ['עסק', 'שחף', 'חשבונית', 'invoice', 'סוכן', 'פיתוח', 'לקוח', 'חברה', 'hubayta', 'שיווק']
+    gefen_keywords = ['גפ"ן', 'גפן', 'בית ספר', 'מורה', 'מורות', 'חינוך', 'תל"א', 'תח"י', 'גוונים', 'רננים', 'אלומות', 'אורי', 'הכט', 'פיקוח']
+    
+    business_score = sum(text_lower.count(k) for k in business_keywords)
+    gefen_score = sum(text_lower.count(k) for k in gefen_keywords)
+    
+    return "עסקים" if business_score > gefen_score else "גפ\"ן"
+
+def extract_meeting_title(summary_text, default_name="פגישה"):
+    """Extracts meeting title from summary text."""
+    import re
+    m = re.search(r'^# סיכום פגישה:\s*(.+)$', summary_text, re.MULTILINE)
+    if m:
+        title = m.group(1).strip()
+        title = re.sub(r'[\[\]]', '', title).strip()
+        if title:
+            return title
+    return os.path.splitext(default_name)[0]
+
+def extract_meeting_date_from_summary(summary_text):
+    """Extracts date string from generated summary."""
+    import re
+    m = re.search(r'\*\*תאריך.*?\:\*\*\s*(.+)$', summary_text, re.MULTILINE)
+    if m:
+        d = m.group(1).strip()
+        d = re.sub(r'[\[\]]', '', d).strip()
+        if d:
+            return d
+    return None
+
+def append_to_master_summary(summary_text, category, meeting_title, date_str):
+    """
+    Appends the meeting summary to the relevant local master file:
+    - Business -> MASTER_BUSINESS_SUMMARY_FILE
+    - Gefen -> MASTER_GEFEN_SUMMARY_FILE
+    """
+    target_file = config.MASTER_BUSINESS_SUMMARY_FILE if category == 'עסקים' else config.MASTER_GEFEN_SUMMARY_FILE
+    
+    if not os.path.exists(os.path.dirname(target_file)):
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+        
+    # Read existing content if file exists
+    if os.path.exists(target_file):
+        with open(target_file, "r", encoding="utf-8") as f:
+            content = f.read()
+    else:
+        title_header = "# 💼 ריכוז סיכומי פגישות עסקיות - הדיאלוג הדיגיטלי" if category == 'עסקים' else "# 📋 ריכוז סיכומי פגישות עבודה - הדיאלוג הדיגיטלי"
+        desc = "קובץ זה מאגד את כלל סיכומי פגישות העבודה, הפרוטוקולים והאוטומציות שנבנו עבור לקוחות עסקיים (בנפרד מתוכניות החינוך והגפ\"ן)." if category == 'עסקים' else "קובץ זה מאגד את כלל סיכומי פגישות העבודה והפרוטוקולים שהתקיימו במסגרת הפרויקטים השונים של \"הדיאלוג הדיגיטלי\"."
+        content = f"{title_header}\n\n{desc}\n\n---\n\n## 🔗 ניווט מהיר\n\n---\n"
+
+    # Avoid duplicate entry if this title and date already exists
+    search_key = f"{meeting_title} - {date_str}"
+    if search_key in content or meeting_title in content:
+        print(f"ℹ️ הפגישה '{meeting_title}' כבר קיימת בקובץ הריכוז: {os.path.basename(target_file)}")
+        return target_file
+
+    # Find next index from navigation list
+    import re
+    nav_pattern = r'## 🔗 ניווט מהיר\s*\n((?:(?:\d+\.|\*)\s*\[.+?\]\(.+?\)\s*\n*)*)'
+    match = re.search(nav_pattern, content)
+    
+    current_items = []
+    if match:
+        nav_block = match.group(1)
+        current_items = re.findall(r'(\d+)\.\s*\[(.+?)\]\((.+?)\)', nav_block)
+        
+    next_idx = len(current_items) + 1
+    
+    # Create anchor slug
+    clean_anchor = re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]+', '-', f"{next_idx}-{meeting_title}-{date_str}").strip('-').lower()
+    nav_entry = f"{next_idx}. [{meeting_title} ({date_str})](#{clean_anchor})"
+    
+    # Format entry content:
+    lines = summary_text.strip().splitlines()
+    body_lines = []
+    skip_header = True
+    for line in lines:
+        if skip_header and (line.startswith("# ") or line.startswith("**נושא")):
+            continue
+        if skip_header and line.strip() == "---":
+            skip_header = False
+            continue
+        if not skip_header:
+            # Demote ## headings to ###
+            if line.startswith("## "):
+                body_lines.append("#" + line)
+            else:
+                body_lines.append(line)
+                
+    formatted_body = "\n".join(body_lines).strip()
+    entry_text = f"\n\n---\n\n## {next_idx}. {meeting_title} - {date_str}\n\n{formatted_body}\n"
+    
+    # Insert new item into navigation section
+    if match:
+        if nav_block.strip():
+            new_nav_block = nav_block.rstrip() + f"\n{nav_entry}\n"
+        else:
+            new_nav_block = f"{nav_entry}\n"
+        content = content[:match.start(1)] + new_nav_block + content[match.end(1):]
+    else:
+        content = content + f"\n## 🔗 ניווט מהיר\n{nav_entry}\n\n---\n"
+        
+    # Append entry to end of file
+    content = content.rstrip() + entry_text
+    
+    with open(target_file, "w", encoding="utf-8") as f:
+        f.write(content)
+        
+    print(f"   ✓ קובץ הריכוז עודכן בהצלחה: {os.path.basename(target_file)} (נוספה פגישה #{next_idx})")
+    return target_file
+
 def summarize_audio_file(audio_path, display_name=None):
     import warnings
     warnings.filterwarnings("ignore")
@@ -318,10 +504,12 @@ def summarize_audio_file(audio_path, display_name=None):
     file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
     file_name = display_name or os.path.basename(audio_path)
     mime_type = get_mime_type(file_name)
+    extracted_date = extract_recording_date(file_name, audio_path)
     
     print("=" * 60)
     print(f"מתחיל תהליך סיכום פגישה:")
     print(f"קובץ: {file_name}")
+    print(f"תאריך שחולץ: {extracted_date}")
     print(f"גודל קובץ: {file_size_mb:.2f} MB")
     print(f"סוג מדיה: {mime_type}")
     print("=" * 60)
@@ -381,11 +569,13 @@ def summarize_audio_file(audio_path, display_name=None):
     print("\n2. מתמלל ומנתח את הפגישה ומפיק סיכום מובנה בעברית...")
     start_gen = time.time()
     
+    dynamic_prompt = PROMPT_MEETING_SUMMARY + f"\n\nהקשר נוסף שנמצא:\n- שם הקובץ: {file_name}\n- תאריך ושעה שחולצו מקובץ ההקלטה: {extracted_date} (השתמש בתאריך זה בשדה התאריך אלא אם צוין תאריך אחר מפורשות בשיחה)."
+    
     response = client.models.generate_content(
         model=config.GEMINI_MODEL,
         contents=[
             audio_content,
-            PROMPT_MEETING_SUMMARY
+            dynamic_prompt
         ]
     )
     
@@ -399,7 +589,14 @@ def summarize_audio_file(audio_path, display_name=None):
         except Exception:
             pass
         
-    # Save outputs
+    # Analyze metadata
+    category = extract_category(summary_text)
+    meeting_title = extract_meeting_title(summary_text, file_name)
+    meeting_date = extract_meeting_date_from_summary(summary_text) or extracted_date
+    
+    print(f"\n📊 סיווג פגישה: '{category}' | כותרת: '{meeting_title}' | תאריך: '{meeting_date}'")
+    
+    # Save outputs locally
     now_str = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
     base_output_name = f"סיכום_פגישה_{now_str}_{os.path.splitext(file_name)[0]}"
     
@@ -419,13 +616,27 @@ def summarize_audio_file(audio_path, display_name=None):
     print(f"• קובץ HTML מעוצב: {html_file_path}")
     print("=" * 60)
     
+    # Update local master summary file
+    try:
+        append_to_master_summary(summary_text, category, meeting_title, meeting_date)
+    except Exception as e:
+        print(f"⚠️ שגיאה בעדכון קובץ הריכוז המרכזי: {e}")
+    
     # Open HTML summary in default browser
     try:
         webbrowser.open(f"file:///{os.path.abspath(html_file_path)}")
     except Exception as e:
         print(f"לא ניתן היה לפתוח את הדפדפן אוטומטית: {e}")
         
-    return html_file_path
+    # Build enriched return object compatible with string
+    res = SummaryResult(html_file_path)
+    res.category = category
+    res.meeting_title = meeting_title
+    res.date_str = meeting_date
+    res.md_path = md_file_path
+    res.html_path = html_file_path
+    res.summary_text = summary_text
+    return res
 
 def select_file_dialog():
     import tkinter as tk

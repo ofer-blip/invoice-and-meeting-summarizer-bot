@@ -4,8 +4,8 @@ import os
 CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), 'credentials.json')
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'token.json')
 
-# Base Gmail Search Query for Invoices (כולל מילים בעברית ובאנגלית, כולל אותיות יחס וספקים נפוצים)
-GMAIL_SEARCH_QUERY_BASE = '(חשבונית OR קבלה OR תשלום OR חיוב OR רכישה OR החשבונית OR הקבלה OR התשלום OR החיוב OR הרכישה OR invoice OR receipt OR morning OR zoom OR billing OR payment OR "כביש 6" OR kvish6 OR from:google OR from:calmail)'
+# Base Gmail Search Query for Invoices (מדויק וללא רעשי התראות אבטחה של גוגל)
+GMAIL_SEARCH_QUERY_BASE = '(חשבונית OR קבלה OR "דרישת תשלום" OR "אישור תשלום" OR "קבלה על תשלום" OR "פירוט חיוב" OR invoice OR receipt OR morning OR zoom OR billing OR "כביש 6" OR kvish6 OR from:avrech.com OR from:payments-noreply@google.com OR from:calmail OR from:invoices OR from:billing) -from:no-reply@accounts.google.com -from:calendar-notification@google.com -from:drive-shares-dm-noreply@google.com -from:googledevelopers-noreply@google.com'
 
 # Email address to send the automated summary report to (can be Ofer's or Shahaf's email)
 # If empty, it will default to the authenticated Gmail account itself (sending to self).
@@ -21,6 +21,13 @@ MAIN_FOLDER_NAME = 'חשבוניות'
 DRIVE_MEETINGS_INPUT_FOLDER = 'הקלטות לפגישות'
 DRIVE_MEETINGS_OUTPUT_FOLDER = 'סיכומי פגישות'
 DRIVE_MEETINGS_ARCHIVE_FOLDER = 'הקלטות שעובדו'
+DRIVE_MEETINGS_SUBFOLDER_BUSINESS = 'עסקים'
+DRIVE_MEETINGS_SUBFOLDER_GEFEN = 'גפ"ן'
+
+# Master Meeting Summary Files on Local Machine
+D_DIALOG_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MASTER_BUSINESS_SUMMARY_FILE = os.path.join(D_DIALOG_ROOT, 'all_meetings_business.md')
+MASTER_GEFEN_SUMMARY_FILE = os.path.join(D_DIALOG_ROOT, 'all_meeting_summaries.md')
 
 # Gemini API Configuration
 # Make sure to set GEMINI_API_KEY environment variable, or configure it here.

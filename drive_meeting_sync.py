@@ -29,6 +29,26 @@ def find_or_create_root_folder(service, folder_name):
         print(f"שגיאה באיתור/יצירת תיקייה '{folder_name}': {e}")
         return None
 
+def find_or_create_subfolder(service, parent_folder_id, subfolder_name):
+    """Finds or creates a subfolder within a parent folder in Google Drive."""
+    query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{subfolder_name}' and '{parent_folder_id}' in parents and trashed = false"
+    try:
+        results = service.files().list(q=query, fields="files(id, name)").execute()
+        files = results.get('files', [])
+        if files:
+            return files[0]['id']
+            
+        file_metadata = {
+            'name': subfolder_name,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [parent_folder_id]
+        }
+        folder = service.files().create(body=file_metadata, fields='id').execute()
+        return folder.get('id')
+    except Exception as e:
+        print(f"שגיאה באיתור/יצירת תיקיית משנה '{subfolder_name}': {e}")
+        return parent_folder_id
+
 def download_drive_file_to_temp(service, file_id, file_name):
     """Downloads a file from Google Drive to a local temporary file."""
     temp_dir = tempfile.gettempdir()
@@ -136,14 +156,17 @@ def sync_and_process_recordings():
                 continue
                 
             md_output_path = html_output_path.replace('.html', '.md')
+            category = getattr(html_output_path, 'category', 'גפ\"ן')
+            subfolder_name = config.DRIVE_MEETINGS_SUBFOLDER_BUSINESS if category == 'עסקים' else config.DRIVE_MEETINGS_SUBFOLDER_GEFEN
             
-            # 3. Upload summary HTML & Markdown to Drive output folder
-            print("\n3. מעלה את הסיכום ל-Google Drive...")
-            uploaded_html = upload_local_file_to_drive(drive_svc, html_output_path, output_folder_id, 'text/html')
+            # 3. Upload summary HTML & Markdown to Drive output folder inside category subfolder
+            print(f"\n3. מעלה את הסיכום ל-Google Drive (תיקיית '{subfolder_name}')...")
+            target_category_folder_id = find_or_create_subfolder(drive_svc, output_folder_id, subfolder_name)
+            uploaded_html = upload_local_file_to_drive(drive_svc, html_output_path, target_category_folder_id, 'text/html')
             if os.path.exists(md_output_path):
-                upload_local_file_to_drive(drive_svc, md_output_path, output_folder_id, 'text/markdown')
+                upload_local_file_to_drive(drive_svc, md_output_path, target_category_folder_id, 'text/markdown')
                 
-            print(f"   ✓ הסיכום נשמר ב-Drive בתיקיית '{config.DRIVE_MEETINGS_OUTPUT_FOLDER}'")
+            print(f"   ✓ הסיכום נשמר ב-Drive בתיקיית '{config.DRIVE_MEETINGS_OUTPUT_FOLDER}/{subfolder_name}'")
             
             # 4. Move original audio file to archive folder in Drive
             print("\n4. מעביר את קובץ ההקלטה המקורי לארכיון ב-Drive...")
