@@ -59,7 +59,7 @@ var PROMPT_MEETING_SUMMARY = "אתה עוזר מקצועי לניהול, תמל�
 "*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר מדויק וריווח מלא בין פסקאות.*";
 
 // פרטי מיתוג וגרסה (D-Dialog)
-var APP_VERSION = "v2.2";
+var APP_VERSION = "v2.3";
 var BRAND_NAME = "D-Dialog";
 var BRAND_TAGLINE = "אוטומציה וסוכני AI מתקדמים לעסקים";
 var BRAND_WEBSITE = "https://ddialog.co.il";
@@ -277,9 +277,7 @@ function checkAndSummarizeMeetings(clientCategory) {
     lastFileName = fileName;
     
     try {
-      // 1. Prepare Base64 audio payload for Gemini
-      var blob = file.getBlob();
-      var audioBase64 = Utilities.base64Encode(blob.getBytes());
+      // 1. Identify audio MIME type
       var audioMime = mimeType;
       if (lowerName.endsWith('.m4a') || lowerName.endsWith('.mp4')) {
         audioMime = "audio/mp4";
@@ -289,46 +287,15 @@ function checkAndSummarizeMeetings(clientCategory) {
         audioMime = "audio/wav";
       }
       
-      // 2. Call Gemini API
+      // 2. Call Gemini API (Handles both small and large audio files)
       var extractedDate = extractDateFromFileName(fileName);
       var dynamicPrompt = PROMPT_MEETING_SUMMARY + "\n\nהקשר נוסף שנמצא:\n- שם קובץ ההקלטה המקורי: " + fileName + "\n- תאריך ושעה שחולצו מקובץ ההקלטה: " + extractedDate + " (השתמש בתאריך זה בשדה התאריך אלא אם צוין תאריך אחר מפורשות בשיחה).";
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
       
-      var payload = {
-        "contents": [
-          {
-            "parts": [
-              {
-                "inline_data": {
-                  "mime_type": audioMime,
-                  "data": audioBase64
-                }
-              },
-              {
-                "text": dynamicPrompt
-              }
-            ]
-          }
-        ]
-      };
-      
-      var options = {
-        "method": "post",
-        "contentType": "application/json",
-        "payload": JSON.stringify(payload),
-        "muteHttpExceptions": true
-      };
-      
-      var response = UrlFetchApp.fetch(url, options);
-      var responseCode = response.getResponseCode();
-      
-      if (responseCode !== 200) {
-        Logger.log("שגיאה מ-Gemini API: " + response.getContentText());
+      var summaryText = callGeminiWithAudio(file, audioMime, dynamicPrompt);
+      if (!summaryText) {
+        Logger.log("לא התקבל סיכום עבור " + fileName);
         continue;
       }
-      
-      var json = JSON.parse(response.getContentText());
-      var summaryText = json.candidates[0].content.parts[0].text;
       
       var category = "גפ\"ן";
       if (clientCategory && clientCategory !== "auto" && clientCategory !== "D-Dialog") {
@@ -757,4 +724,132 @@ function appendToMasterGoogleDoc(summaryText, category, meetingTitle, dateStr, f
     Logger.log("⚠️ שגיאה בהוספה למסמך ריכוז: " + err.toString());
     return null;
   }
+}
+
+/**
+ * מפעיל את מודל Gemini עבור קובץ שמע.
+ * תומך בקבצים קטנים וגדולים ללא שגיאת מגבלת Payload של URLFetch.
+ */
+function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
+  var fileSize = file.getSize();
+  var blob = file.getBlob();
+  var fileName = file.getName();
+  
+  // לקבצים קטנים מ-4MB - שימוש ב-Inline Base64 מהיר
+  if (fileSize < 4 * 1024 * 1024) {
+    Logger.log("⚡ קובץ קל (" + (fileSize / (1024*1024)).toFixed(2) + " MB) - מעבד ב-Inline Base64...");
+    var audioBase64 = Utilities.base64Encode(blob.getBytes());
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+    
+    var payload = {
+      "contents": [
+        {
+          "parts": [
+            {
+              "inline_data": {
+                "mime_type": audioMime,
+                "data": audioBase64
+              }
+            },
+            {
+              "text": dynamicPrompt
+            }
+          ]
+        }
+      ]
+    };
+    
+    var response = UrlFetchApp.fetch(url, {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    });
+    
+    if (response.getResponseCode() !== 200) {
+      throw new Error("שגיאה מ-Gemini API: " + response.getContentText());
+    }
+    
+    var json = JSON.parse(response.getContentText());
+    return json.candidates[0].content.parts[0].text;
+  }
+  
+  // לקבצים גדולים (4MB ומעלה) - שימוש ב-Gemini Files API להעלאת קובץ בינארי מלא
+  Logger.log("📁 קובץ גדול מזוהה (" + (fileSize / (1024*1024)).toFixed(2) + " MB) - מעלה ישירות ל-Gemini Files API...");
+  
+  var initUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?key=" + GEMINI_API_KEY;
+  var initHeaders = {
+    "X-Goog-Upload-Protocol": "resumable",
+    "X-Goog-Upload-Command": "start",
+    "X-Goog-Upload-Header-Content-Length": fileSize.toString(),
+    "X-Goog-Upload-Header-Content-Type": audioMime,
+    "Content-Type": "application/json"
+  };
+  
+  var initResponse = UrlFetchApp.fetch(initUrl, {
+    "method": "post",
+    "headers": initHeaders,
+    "payload": JSON.stringify({ "file": { "display_name": fileName } }),
+    "muteHttpExceptions": true
+  });
+  
+  var headers = initResponse.getAllHeaders();
+  var uploadUrl = headers["X-Goog-Upload-URL"] || headers["x-goog-upload-url"] || headers["X-Goog-Upload-Url"];
+  if (!uploadUrl) {
+    throw new Error("לא ניתן היה לאתחל העלאה ל-Gemini Files API: " + initResponse.getContentText());
+  }
+  
+  // העלאת הקובץ הבינארי ישירות לשרתי גוגל
+  var uploadResponse = UrlFetchApp.fetch(uploadUrl, {
+    "method": "post",
+    "headers": {
+      "Content-Length": fileSize.toString(),
+      "X-Goog-Upload-Offset": "0",
+      "X-Goog-Upload-Command": "upload, finalize"
+    },
+    "payload": blob.getBytes(),
+    "muteHttpExceptions": true
+  });
+  
+  if (uploadResponse.getResponseCode() !== 200) {
+    throw new Error("שגיאה בהעלאת קובץ ל-Gemini Files API: " + uploadResponse.getContentText());
+  }
+  
+  var fileInfo = JSON.parse(uploadResponse.getContentText());
+  var fileUri = fileInfo.file.uri;
+  Logger.log("✓ הקובץ הועלה ל-Gemini בהצלחה: " + fileUri);
+  
+  // הפקת הסיכום באמצעות ה-URI של הקובץ שהועלה
+  var genUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+  var genPayload = {
+    "contents": [
+      {
+        "parts": [
+          {
+            "file_data": {
+              "mime_type": audioMime,
+              "file_uri": fileUri
+            }
+          },
+          {
+            "text": dynamicPrompt
+          }
+        ]
+      }
+    ]
+  };
+  
+  var genResponse = UrlFetchApp.fetch(genUrl, {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(genPayload),
+    "muteHttpExceptions": true
+  });
+  
+  if (genResponse.getResponseCode() !== 200) {
+    throw new Error("שגיאה מ-Gemini בעת הפקת הסיכום: " + genResponse.getContentText());
+  }
+  
+  var genJson = JSON.parse(genResponse.getContentText());
+  return genJson.candidates[0].content.parts[0].text;
 }
