@@ -1,27 +1,46 @@
 /**
  * =========================================================================
- * אפליקציית ענן ווב: סיכום פגישות ישיר מ-Google Drive ומייל
- * D-Dialog Meeting Summarizer — Google Apps Script (Web App)
+ * מנוע סיכום פגישות AI - D-Dialog (Engine.gs)
+ * קובץ זה מכיל את מנוע המערכת והלוגיקה בלבד.
+ * קובץ זה משותף וזהה ב-100% לכל הלקוחות (אינו מכיל מפתחות פרטיים).
+ * כל הגדרות הלקוח והמפתחות מוגדרים אך ורק בקובץ Config.gs.
  * =========================================================================
  */
 
-// הגדרות מערכת ומפתחות
-var GEMINI_API_KEY = "AQ.Ab8RN6IL8JL8EC1V4LyOTMwZakgkenawg4RFmX7-0A5YMA0Gyg";
-var GEMINI_MODEL = "gemini-2.5-flash";
-
-/// שמות התיקיות ותיקיות המשנה ב-Google Drive
-var FOLDER_INPUT_NAME = "הקלטות לפגישות";
-var FOLDER_OUTPUT_NAME = "סיכומי פגישות";
-var FOLDER_ARCHIVE_NAME = "הקלטות שעובדו";
-var FOLDER_SUB_BUSINESS = "עסקים";
-var FOLDER_SUB_GEFEN = "גפ\"ן";
-
-// שמות מסמכי הריכוז המרכזיים ב-Google Drive
-var MASTER_DOC_BUSINESS_NAME = "💼 ריכוז סיכומי פגישות עסקיות";
-var MASTER_DOC_GEFEN_NAME = "📋 ריכוז סיכומי פגישות גפ\"ן";
-
-// כתובת מייל לקבלת הסיכום (השאר ריק כדי לשלוח אוטומטית למייל שלך)
-var NOTIFICATION_EMAIL = "";
+// בדיקת משתני קונפיגורציה מקובץ Config.gs
+if (typeof GEMINI_API_KEY === 'undefined') {
+  var GEMINI_API_KEY = ""; // יוגדר בקובץ Config.gs
+}
+if (typeof GEMINI_MODEL === 'undefined') {
+  var GEMINI_MODEL = "gemini-2.5-flash";
+}
+if (typeof FOLDER_INPUT_NAME === 'undefined') {
+  var FOLDER_INPUT_NAME = "הקלטות לפגישות";
+}
+if (typeof FOLDER_OUTPUT_NAME === 'undefined') {
+  var FOLDER_OUTPUT_NAME = "סיכומי פגישות";
+}
+if (typeof FOLDER_ARCHIVE_NAME === 'undefined') {
+  var FOLDER_ARCHIVE_NAME = "הקלטות שעובדו";
+}
+if (typeof NOTIFICATION_EMAIL === 'undefined') {
+  var NOTIFICATION_EMAIL = "";
+}
+if (typeof BRAND_NAME === 'undefined') {
+  var BRAND_NAME = "D-Dialog";
+}
+if (typeof BRAND_TAGLINE === 'undefined') {
+  var BRAND_TAGLINE = "אוטומציה וסוכני AI מתקדמים לעסקים";
+}
+if (typeof BRAND_WEBSITE === 'undefined') {
+  var BRAND_WEBSITE = "https://ddialog.co.il";
+}
+if (typeof BRAND_PHONE === 'undefined') {
+  var BRAND_PHONE = "052-6947202";
+}
+if (typeof DEFAULT_CATEGORIES === 'undefined') {
+  var DEFAULT_CATEGORIES = ["עסקים", "גפ\"ן"];
+}
 
 // פרומפט מותאם אישית למודל השפה
 var PROMPT_MEETING_SUMMARY = "אתה עוזר מקצועי לניהול, תמלול וסיכום פגישות עסקיות, פדגוגיות ואסטרטגיות בעברית.\n" +
