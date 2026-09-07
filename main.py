@@ -145,12 +145,14 @@ def main():
     target_year = int(start_parts[0])
     target_month = int(start_parts[1])
     
-    # Expand date range by 1 day for Gmail query to avoid timezone boundary issues
+    # Expand date range for Gmail query:
+    # 1 day before start to avoid timezone issues, and 15 days after target month end
+    # because many suppliers (fuel, telecom, utilities) send previous month's invoice in early next month.
     try:
         start_dt = datetime.strptime(start_date, "%Y/%m/%d")
         end_dt = datetime.strptime(end_date, "%Y/%m/%d")
         gmail_start = (start_dt - timedelta(days=1)).strftime("%Y/%m/%d")
-        gmail_end = (end_dt + timedelta(days=1)).strftime("%Y/%m/%d")
+        gmail_end = (end_dt + timedelta(days=15)).strftime("%Y/%m/%d")
     except Exception:
         gmail_start = start_date
         gmail_end = end_date
@@ -226,41 +228,52 @@ def main():
                     email_sender=msg_details['sender']
                 )
                 
+                # Deduplication check on message + filename
+                attachment_key = f"{msg_id}_{filename}"
+                if attachment_key in processed_keys:
+                    safe_print(f"    [דילוג כפילות] הקובץ '{filename}' כבר עובד עבור מייל זה.")
+                    continue
+                processed_keys.add(attachment_key)
+                
                 if not classification:
-                    safe_print(f"    [שגיאה] לא ניתן היה לנתח את הקובץ '{filename}'.")
-                    continue
+                    safe_print(f"    [חילוץ בסיסי] לא התקבל ניתוח מלא מ-AI עבור '{filename}', יוצר רשומה בסיסית.")
+                    classification = classifier.InvoiceClassification(
+                        is_invoice_or_receipt=True,
+                        document_type="מסמך חשבונאי",
+                        direction="לבדיקה",
+                        supplier_name=msg_details.get('sender', 'ספק'),
+                        document_date=f"{target_year}-{target_month:02d}-01",
+                        total_amount=0.0,
+                        invoice_number="0",
+                        currency="ILS"
+                    )
                     
-                if not classification.is_invoice_or_receipt:
-                    safe_print(f"    [דילוג] הקובץ '{filename}' אינו חשבונית או קבלה (סווג כ-{classification.document_type}).")
-                    continue
-                    
-                # Validate date logic (e.g. skip if 1970, 2023 or older than 4 months)
-                if not is_valid_document_date(classification.document_date, target_year, target_month):
-                    safe_print(f"    [דילוג תאריך] תאריך החשבונית ({classification.document_date}) אינו הגיוני לחודש הסריקה המבוקש ({target_month}/{target_year}).")
-                    continue
-                    
-                # Deduplication check
-                duplicate_key = (classification.document_date, classification.supplier_name.lower().strip(), classification.total_amount)
-                if duplicate_key in processed_keys:
-                    safe_print(f"    [דילוג כפילות] חשבונית זו כבר עובדה בריצה הנוכחית ({classification.supplier_name}, {classification.total_amount} {classification.currency})")
-                    continue
-                processed_keys.add(duplicate_key)
+                # Fix or fallback document date if missing or invalid
+                if not classification.document_date or len(classification.document_date) < 8:
+                    classification.document_date = f"{target_year}-{target_month:02d}-01"
                 
                 # Log details
-                safe_print(f"    [נמצאה חשבונית] סוג: {classification.document_type}")
+                safe_print(f"    [מעבד מסמך] סוג: {classification.document_type}")
                 safe_print(f"    ספק: {classification.supplier_name} | לקוח: {classification.client_name}")
                 safe_print(f"    תאריך: {classification.document_date} | סכום: {classification.total_amount} {classification.currency}")
-                safe_print(f"    סיווג: {classification.direction} (הכנסה/הוצאה)")
+                safe_print(f"    סיווג: {classification.direction}")
                 
-                # Upload PDF to Google Drive
-                file_id, year_month, category = drive_service.organize_invoice_in_drive(drive, classification, att['bytes'], mime_type='application/pdf')
+                # Upload PDF to Google Drive directly in month folder
+                target_ym = f"{target_year}-{target_month:02d}"
+                file_id, year_month, category = drive_service.organize_invoice_in_drive(
+                    drive, 
+                    classification, 
+                    att['bytes'], 
+                    mime_type='application/pdf',
+                    target_year_month=target_ym
+                )
                 if file_id:
                     safe_print(f"    [הצלחה] הקובץ הועלה לדרייב. מזהה קובץ: {file_id}")
                     total_uploaded += 1
                     
                     # Collect spreadsheet row data
                     drive_url = f"https://drive.google.com/file/d/{file_id}/view"
-                    partner_name = classification.supplier_name if classification.direction == 'הוצאה' else classification.client_name
+                    partner_name = classification.supplier_name if classification.direction == 'הוצאה' else (classification.client_name or classification.supplier_name)
                     row_data = [
                         classification.document_date,
                         partner_name,
@@ -270,21 +283,32 @@ def main():
                         drive_url
                     ]
                     
-                    if year_month not in invoices_by_month:
-                        invoices_by_month[year_month] = {'הכנסות': [], 'הוצאות': []}
+                    if target_ym not in invoices_by_month:
+                        invoices_by_month[target_ym] = {'כל המסמכים': [], 'הכנסות': [], 'הוצאות': [], 'לבדיקה': []}
                         
-                    if category in ['הכנסות', 'הוצאות']:
-                        invoices_by_month[year_month][category].append(row_data)
+                    invoices_by_month[target_ym]['כל המסמכים'].append(row_data)
+                    if classification.direction == 'הכנסה':
+                        invoices_by_month[target_ym]['הכנסות'].append(row_data)
+                    elif classification.direction == 'הוצאה':
+                        invoices_by_month[target_ym]['הוצאות'].append(row_data)
+                    else:
+                        invoices_by_month[target_ym]['לבדיקה'].append(row_data)
                 else:
                     safe_print(f"    [שגיאה] העלאת הקובץ לדרייב נכשלה.")
         else:
             # 2. No attachments. Check email body text.
-            safe_print("  לא נמצאו קבצי PDF. מנסה לנתח את גוף המייל עצמו...")
+            safe_print("  לא נמצאו קבצי PDF. מנסה לנתח את גוף המייל עצמו כאישור תשלום/קבלה...")
             body_text, mime_type = gmail_service.get_email_body(msg_details)
             if not body_text:
                 safe_print("  גוף המייל ריק או לא ניתן לקריאה.")
                 continue
                 
+            body_key = f"{msg_id}_body"
+            if body_key in processed_keys:
+                safe_print(f"    [דילוג כפילות] גוף המייל עבור '{msg_details['subject']}' כבר עובד.")
+                continue
+            processed_keys.add(body_key)
+            
             total_processed += 1
             classification = classifier.classify_invoice_body(
                 gemini_client, 
@@ -294,30 +318,26 @@ def main():
             )
             
             if not classification:
-                safe_print("    [שגיאה] לא ניתן היה לנתח את גוף המייל.")
-                continue
+                safe_print(f"    [חילוץ בסיסי] לא התקבל ניתוח מלא מ-AI עבור גוף המייל, יוצר רשומה בסיסית.")
+                classification = classifier.InvoiceClassification(
+                    is_invoice_or_receipt=True,
+                    document_type="אישור תשלום במייל",
+                    direction="לבדיקה",
+                    supplier_name=msg_details.get('sender', 'ספק'),
+                    document_date=f"{target_year}-{target_month:02d}-01",
+                    total_amount=0.0,
+                    invoice_number="אישור",
+                    currency="ILS"
+                )
                 
-            if not classification.is_invoice_or_receipt:
-                safe_print(f"    [דילוג] גוף המייל אינו מייצג חשבונית או קבלה (סווג כ-{classification.document_type}).")
-                continue
-                
-            # Validate date logic
-            if not is_valid_document_date(classification.document_date, target_year, target_month):
-                safe_print(f"    [דילוג תאריך] תאריך החשבונית ({classification.document_date}) אינו הגיוני לחודש הסריקה המבוקש ({target_month}/{target_year}).")
-                continue
-                
-            # Deduplication check
-            duplicate_key = (classification.document_date, classification.supplier_name.lower().strip(), classification.total_amount)
-            if duplicate_key in processed_keys:
-                safe_print(f"    [דילוג כפילות] חשבונית זו כבר עובדה בריצה הנוכחית ({classification.supplier_name}, {classification.total_amount} {classification.currency})")
-                continue
-            processed_keys.add(duplicate_key)
+            if not classification.document_date or len(classification.document_date) < 8:
+                classification.document_date = f"{target_year}-{target_month:02d}-01"
             
             # Log details
-            safe_print(f"    [נמצאה חשבונית בגוף המייל] סוג: {classification.document_type}")
+            safe_print(f"    [נמצאה הודעה פיננסית בגוף המייל] סוג: {classification.document_type}")
             safe_print(f"    ספק: {classification.supplier_name} | לקוח: {classification.client_name}")
             safe_print(f"    תאריך: {classification.document_date} | סכום: {classification.total_amount} {classification.currency}")
-            safe_print(f"    סיווג: {classification.direction} (הכנסה/הוצאה)")
+            safe_print(f"    סיווג: {classification.direction}")
             
             # Generate PDF from HTML body
             pdf_bytes = drive_service.generate_pdf_from_email_body(
@@ -327,8 +347,15 @@ def main():
                 body_text
             )
             
-            # Upload generated PDF to Google Drive
-            file_id, year_month, category = drive_service.organize_invoice_in_drive(drive, classification, pdf_bytes, mime_type='application/pdf')
+            # Upload generated PDF to Google Drive directly in month folder
+            target_ym = f"{target_year}-{target_month:02d}"
+            file_id, year_month, category = drive_service.organize_invoice_in_drive(
+                drive, 
+                classification, 
+                pdf_bytes, 
+                mime_type='application/pdf',
+                target_year_month=target_ym
+            )
             
             if file_id:
                 safe_print(f"    [הצלחה] קובץ ה-PDF עבור גוף המייל הועלה לדרייב. מזהה קובץ: {file_id}")
@@ -336,7 +363,7 @@ def main():
                 
                 # Collect spreadsheet row data
                 drive_url = f"https://drive.google.com/file/d/{file_id}/view"
-                partner_name = classification.supplier_name if classification.direction == 'הוצאה' else classification.client_name
+                partner_name = classification.supplier_name if classification.direction == 'הוצאה' else (classification.client_name or classification.supplier_name)
                 row_data = [
                     classification.document_date,
                     partner_name,
@@ -346,11 +373,16 @@ def main():
                     drive_url
                 ]
                 
-                if year_month not in invoices_by_month:
-                    invoices_by_month[year_month] = {'הכנסות': [], 'הוצאות': []}
+                if target_ym not in invoices_by_month:
+                    invoices_by_month[target_ym] = {'כל המסמכים': [], 'הכנסות': [], 'הוצאות': [], 'לבדיקה': []}
                     
-                if category in ['הכנסות', 'הוצאות']:
-                    invoices_by_month[year_month][category].append(row_data)
+                invoices_by_month[target_ym]['כל המסמכים'].append(row_data)
+                if classification.direction == 'הכנסה':
+                    invoices_by_month[target_ym]['הכנסות'].append(row_data)
+                elif classification.direction == 'הוצאה':
+                    invoices_by_month[target_ym]['הוצאות'].append(row_data)
+                else:
+                    invoices_by_month[target_ym]['לבדיקה'].append(row_data)
             else:
                 safe_print(f"    [שגיאה] העלאת קובץ ה-PDF לדרייב נכשלה.")
                 

@@ -105,15 +105,16 @@ def upload_file_to_drive(service, file_name, file_bytes, folder_id, mime_type='a
         print(f"Error uploading file '{file_name}': {e}")
         return None
 
-def organize_invoice_in_drive(service, classification, file_bytes, mime_type='application/pdf'):
-    """Organizes the invoice into the correct month and category (הכנסות/הוצאות) folders."""
-    # Extract year and month for folder naming (e.g. 2026-08)
-    date_str = classification.document_date
-    if len(date_str) >= 7 and date_str[4] == '-' and date_str[7] == '-':
-        year_month = date_str[:7]
+def organize_invoice_in_drive(service, classification, file_bytes, mime_type='application/pdf', target_year_month=None):
+    """Organizes the invoice directly into the target month folder without hiding files in subfolders."""
+    if target_year_month:
+        year_month = target_year_month
     else:
-        # Fallback to general folder if date structure is weird
-        year_month = "כללי"
+        date_str = classification.document_date
+        if len(date_str) >= 7 and date_str[4] == '-':
+            year_month = date_str[:7]
+        else:
+            year_month = "כללי"
         
     parent_folder_name = f"חשבוניות {year_month}"
     
@@ -121,35 +122,21 @@ def organize_invoice_in_drive(service, classification, file_bytes, mime_type='ap
     month_folder_id = find_or_create_folder(service, parent_folder_name)
     if not month_folder_id:
         print("Failed to get or create month folder.")
-        return None, year_month, None
+        return None, year_month, classification.direction
         
-    # 2. Create or get subfolder (הכנסות or הוצאות)
-    direction_folder_name = classification.direction # 'הכנסה' or 'הוצאה'
-    # Map to plural for folder names
-    if direction_folder_name == 'הכנסה':
-        subfolder_name = 'הכנסות'
-    elif direction_folder_name == 'הוצאה':
-        subfolder_name = 'הוצאות'
-    else:
-        subfolder_name = 'אחר'
-        
-    subfolder_id = find_or_create_folder(service, subfolder_name, parent_id=month_folder_id)
-    if not subfolder_id:
-        print(f"Failed to get or create subfolder: {subfolder_name}")
-        return None, year_month, subfolder_name
-        
-    # 3. Format filename: YYYY-MM-DD_SupplierName_Amount_InvoiceNum.ext
-    # Sanitise name to avoid issues
+    # Format filename: YYYY-MM-DD_SupplierName_Amount_InvoiceNum.ext
     clean_supplier = "".join(c for c in classification.supplier_name if c.isalnum() or c in " _-")
     clean_supplier = clean_supplier.strip().replace(" ", "_")
+    if not clean_supplier:
+        clean_supplier = "ספק"
     
     ext = '.html' if mime_type == 'text/html' else '.pdf'
     formatted_filename = f"{classification.document_date}_{clean_supplier}_{classification.total_amount}_{classification.invoice_number}{ext}"
     
-    # 4. Upload
-    print(f"Uploading '{formatted_filename}' to Google Drive under '{parent_folder_name}/{subfolder_name}'...")
-    file_id = upload_file_to_drive(service, formatted_filename, file_bytes, subfolder_id, mime_type=mime_type)
-    return file_id, year_month, subfolder_name
+    # Upload directly into the month folder
+    print(f"Uploading '{formatted_filename}' directly to Google Drive under '{parent_folder_name}'...")
+    file_id = upload_file_to_drive(service, formatted_filename, file_bytes, month_folder_id, mime_type=mime_type)
+    return file_id, year_month, classification.direction
 
 def create_or_get_spreadsheet(drive_service, sheets_service, folder_id, year_month):
     """Finds or creates a Google Sheet named 'ריכוז חשבוניות YYYY-MM' in the given folder and ensures tabs exist."""
@@ -178,10 +165,9 @@ def create_or_get_spreadsheet(drive_service, sheets_service, folder_id, year_mon
         existing_titles = [s['properties']['title'] for s in existing_sheets]
         
         requests = []
-        if 'הכנסות' not in existing_titles:
-            requests.append({'addSheet': {'properties': {'title': 'הכנסות'}}})
-        if 'הוצאות' not in existing_titles:
-            requests.append({'addSheet': {'properties': {'title': 'הוצאות'}}})
+        for tab_name in ['כל המסמכים', 'הוצאות', 'הכנסות', 'לבדיקה']:
+            if tab_name not in existing_titles:
+                requests.append({'addSheet': {'properties': {'title': tab_name}}})
             
         if requests:
             sheets_service.spreadsheets().batchUpdate(
@@ -194,7 +180,7 @@ def create_or_get_spreadsheet(drive_service, sheets_service, folder_id, year_mon
         existing_sheets = sheet_metadata.get('sheets', [])
         existing_titles = [s['properties']['title'] for s in existing_sheets]
         
-        if 'הכנסות' in existing_titles and 'הוצאות' in existing_titles and 'Sheet1' in existing_titles:
+        if 'Sheet1' in existing_titles and len(existing_sheets) > 1:
             sheet1_id = None
             for s in existing_sheets:
                 if s['properties']['title'] == 'Sheet1':

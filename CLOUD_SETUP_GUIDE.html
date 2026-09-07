@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדריך הטמעה מהיר - D-Dialog Invoice Bot</title>
+  <style>
+    :root {
+      --bg: #0F172A;
+      --card-bg: #1E293B;
+      --border: #334155;
+      --primary: #10B981;
+      --primary-hover: #059669;
+      --accent: #38BDF8;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 30px 20px; direction: rtl; line-height: 1.6; }
+    .container { max-width: 780px; margin: 0 auto; }
+    
+    /* Header */
+    .header { text-align: center; margin-bottom: 36px; }
+    .logo-img { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 10px 25px -3px rgba(16, 185, 129, 0.4); margin-bottom: 16px; }
+    h1 { font-size: 26px; font-weight: 800; color: #FFFFFF; margin-bottom: 8px; }
+    p.subtitle { font-size: 15px; color: var(--text-muted); }
+
+    /* Step Card */
+    .step-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+      padding: 24px 28px; margin-bottom: 22px; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    .step-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .step-badge {
+      width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: bold; flex-shrink: 0;
+    }
+    .step-title { font-size: 18px; font-weight: 700; color: #FFFFFF; }
+    
+    .step-content p, .step-content li { font-size: 14.5px; color: #CBD5E1; margin-bottom: 10px; }
+    .step-content ul, .step-content ol { padding-right: 22px; margin-bottom: 14px; }
+    .step-content li { margin-bottom: 8px; }
+
+    .code-box {
+      background: #090D16; border: 1px solid #1E293B; border-radius: 12px;
+      padding: 14px 16px; font-family: Consolas, monospace; font-size: 13.5px;
+      color: #38BDF8; direction: ltr; text-align: left; overflow-x: auto; margin: 12px 0;
+      word-break: break-all;
+    }
+
+    /* Interactive Link Generator */
+    .generator-box {
+      background: rgba(16, 185, 129, 0.08); border: 1.5px solid var(--primary);
+      border-radius: 16px; padding: 20px; margin-top: 15px;
+    }
+    .generator-box label { display: block; font-size: 13.5px; font-weight: 600; color: #6EE7B7; margin-bottom: 8px; }
+    .gen-input {
+      width: 100%; padding: 13px; background: #0F172A; border: 1px solid var(--border);
+      border-radius: 10px; color: #FFFFFF; font-size: 13.5px; direction: ltr; text-align: left;
+      outline: none; margin-bottom: 12px;
+    }
+    .gen-input:focus { border-color: var(--primary); }
+    
+    .btn {
+      padding: 12px 20px; font-size: 14px; font-weight: 700; color: #FFFFFF;
+      background: var(--primary); border: none; border-radius: 10px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-copy { background: #334155; }
+    .btn-copy:hover { background: #475569; }
+    
+    .result-box {
+      background: #090D16; border: 1px solid #334155; border-radius: 10px;
+      padding: 14px; margin-top: 14px; direction: ltr; text-align: left;
+      font-family: Consolas, monospace; font-size: 13px; color: #A7F3D0; word-break: break-all;
+    }
+
+    .highlight { color: #FDE047; font-weight: 600; }
+    
+    /* Footer */
+    .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 13px; }
+    .footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <div class="header">
+      <img src="data:image/jpeg;base64,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" alt="D-Dialog" class="logo-img">
+      <h1>מדריך הטמעה מהיר - D-Dialog Invoice Bot</h1>
+      <p class="subtitle">הטמעה מלאה ב-5 דקות אצל שחף מיכאל / לקוח חדש</p>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-badge">1</div>
+        <div class="step-title">פתיחת פרויקט חדש ב-Google של שחף</div>
+      </div>
+      <div class="step-content">
+        <ol>
+          <li>נכנסים בדפדפן של שחף לאתר: <a href="https://script.google.com" target="_blank" style="color:#38BDF8;font-weight:bold;">script.google.com</a>.</li>
+          <li>לוחצים על <strong>פרויקט חדש (New project)</strong> ומשנים את שם הפרויקט ל-<code>D-Dialog Invoice Bot - שחף מיכאל</code>.</li>
+          <li>פותחים את הקובץ <code>Invoice_Bot_AppsScript.js</code>, מעתיקים את <strong>כל הקוד</strong> ומדביקים בתוך <code>Code.gs</code>.</li>
+          <li><strong>עדכון שורות ראשונות בלבד בקוד:</strong>
+            <ul>
+              <li><code>GEMINI_API_KEY</code> – מפתח ה-Gemini של שחף (מאתר <a href="https://aistudio.google.com" target="_blank" style="color:#38BDF8;">aistudio.google.com</a>).</li>
+              <li><code>MAIN_PARENT_FOLDER_ID = ""</code> – משאירים ריק כדי שייצור אוטומטית תיקיית "חשבוניות" אצלו ב-Drive.</li>
+            </ul>
+          </li>
+          <li>לוחצים <strong>Save 💾</strong> (<code>Ctrl + S</code>).</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-badge">2</div>
+        <div class="step-title">פריסה (Deploy) וקבלת כתובת ה-Web App</div>
+      </div>
+      <div class="step-content">
+        <ol>
+          <li>לוחצים למעלה על <strong>Deploy</strong> > <strong>New deployment</strong>.</li>
+          <li>בוחרים בסמל גלגל השיניים ⚙️: <strong>Web app</strong>.</li>
+          <li>מגדירים:
+            <ul>
+              <li><strong>Execute as:</strong> <code>Me (חשבון שחף)</code></li>
+              <li><strong>Who has access:</strong> <span class="highlight">Anyone (כל אחד)</span></li>
+            </ul>
+          </li>
+          <li>לוחצים <strong>Deploy</strong> ומאשרים הרשאות בגוגל (<code>Advanced</code> > <code>Go to D-Dialog... (unsafe)</code> > <code>Allow</code>).</li>
+          <li><strong>מעתיקים את ה-Web App URL</strong> שקיבלתם (הקישור שמסתיים ב-<code>/exec</code>).</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-badge">3</div>
+        <div class="step-title">הגדרת טיימר אוטומטי לחודש הבא (30 שניות)</div>
+      </div>
+      <div class="step-content">
+        <ol>
+          <li>בתפריט הצדדי ב-Apps Script לוחצים על סמל השעון ⏰ (<strong>Triggers</strong>).</li>
+          <li>לוחצים למטה על <strong>Add Trigger</strong>:
+            <ul>
+              <li><strong>Function:</strong> <code>runMonthlyAutomatedScan</code></li>
+              <li><strong>Event source:</strong> <code>Time-driven</code></li>
+              <li><strong>Type of trigger:</strong> <code>Month timer</code></li>
+              <li><strong>Day:</strong> <code>1st of the month (ב-1 לחודש)</code></li>
+              <li><strong>Time:</strong> <code>8am to 9am</code></li>
+            </ul>
+          </li>
+          <li>לוחצים <strong>Save</strong>.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Step 4: Interactive Link Generator -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-badge">4</div>
+        <div class="step-title">מחולל קישור PWA לשליחה בוואטסאפ של שחף</div>
+      </div>
+      <div class="step-content">
+        <p>הדבק כאן את קישור ה-Google Apps Script שקיבלת עבור שחף כדי לייצר את הקישור הממותג הסופי:</p>
+        
+        <div class="generator-box">
+          <label for="scriptInput">הדבק את קישור ה-Apps Script (ממסתיים ב-<code>/exec</code>):</label>
+          <input type="url" id="scriptInput" class="gen-input" placeholder="https://script.google.com/macros/s/.../exec" value="https://script.google.com/macros/s/AKfycbwhbVeSnVUP0CRxfyYVdCYdPMSnmSzXqmujbE6El3906_Gvd634vIUVD7xCWYhKhpUb/exec" oninput="generateLink()">
+          
+          <label>הקישור הממותג המלא לשליחה לשחף:</label>
+          <div id="fullResult" class="result-box">https://ddialog-invoices.web.app?script=https://script.google.com/macros/s/AKfycbwhbVeSnVUP0CRxfyYVdCYdPMSnmSzXqmujbE6El3906_Gvd634vIUVD7xCWYhKhpUb/exec</div>
+          
+          <div style="margin-top: 14px; display: flex; gap: 10px;">
+            <button class="btn" onclick="copyFullLink()">📋 העתק קישור</button>
+            <button class="btn btn-copy" onclick="copyWhatsAppMessage()">💬 העתק הודעת וואטסאפ מוכנה</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 18px;">
+          <p><strong>הוראות התקנה לשחף בטלפון:</strong></p>
+          <ul>
+            <li><strong>באייפון (Safari):</strong> לוחצים על כפתור השיתוף בתחתית המסך > <strong>"הוסף למסך הבית" (Add to Home Screen)</strong>.</li>
+            <li><strong>באנדרואיד (Chrome/Brave):</strong> לוחצים על 3 הנקודות > <strong>"הוסף למסך הבית" (Add to Home screen)</strong>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      פותח על ידי <strong>D-Dialog</strong> | <a href="https://ddialog.co.il/%D7%94%D7%9B%D7%95%D7%95%D7%A0%D7%94" target="_blank">תוכנית ההכוונה וה-AI של D-Dialog</a>
+    </div>
+
+  </div>
+
+  <script>
+    function generateLink() {
+      var val = document.getElementById('scriptInput').value.trim();
+      var target = val ? val : 'https://script.google.com/macros/s/.../exec';
+      var finalUrl = 'https://ddialog-invoices.web.app?script=' + target;
+      document.getElementById('fullResult').innerText = finalUrl;
+    }
+
+    function copyFullLink() {
+      var text = document.getElementById('fullResult').innerText;
+      navigator.clipboard.writeText(text).then(function() {
+        alert('הקישור המלא הועתק בהצלחה ללוח!');
+      });
+    }
+
+    function copyWhatsAppMessage() {
+      var url = document.getElementById('fullResult').innerText;
+      var msg = 'היי שחף,\nהנה הקישור לאפליקציית בוט החשבוניות שלך מבית D-Dialog:\n' + url + '\n\n📲 להתקנה בנייד: פתח את הקישור בדפדפן בטלפון > לחץ על שלוש הנקודות (או כפתור שיתוף בספארי) > ובחר "הוסף למסך הבית".';
+      navigator.clipboard.writeText(msg).then(function() {
+        alert('הודעת הוואטסאפ הועתקה בהצלחה ללוח!');
+      });
+    }
+  </script>
+
+</body>
+</html>
