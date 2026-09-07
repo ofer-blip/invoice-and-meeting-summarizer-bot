@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="סיכום פגישות">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="D-Dialog | בוט סיכום פגישות AI">
+  <meta property="og:description" content="סנכרון הקלטות מ-Google Drive, תמלול חכם ב-Gemini והפקת סיכום מנהלים מובנה ישירות למייל.">
+  <meta property="og:image" content="https://ddialog-meetings.web.app/og-image.jpg">
+  <meta property="og:image:width" content="600">
+  <meta property="og:image:height" content="600">
+  
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <title>D-Dialog | בוט סיכום פגישות AI</title>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background: #0F172A; color: #F8FAFC; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; direction: rtl; text-align: center; }
+    .card { background: #1E293B; border: 1px solid #334155; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 440px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); position: relative; }
+    .logo-img { width: 84px; height: 84px; border-radius: 22px; box-shadow: 0 10px 25px -3px rgba(14, 165, 233, 0.45); object-fit: cover; margin-bottom: 18px; display: block; margin-left: auto; margin-right: auto; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #FFFFFF; }
+    p.desc { font-size: 14px; color: #94A3B8; margin-bottom: 24px; line-height: 1.5; }
+    
+    .action-btn {
+      width: 100%; padding: 18px 20px; font-size: 17px; font-weight: 700; color: #FFFFFF;
+      background: linear-gradient(135deg, #0EA5E9, #2563EB); border: none; border-radius: 16px;
+      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.35);
+      display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px;
+    }
+    .action-btn:active { transform: scale(0.98); }
+    .action-btn:disabled { background: #475569; color: #94A3B8; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .direct-link-btn {
+      width: 100%; padding: 13px; font-size: 14px; font-weight: 600; color: #38BDF8;
+      background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+    }
+    
+    #status-box { margin-top: 20px; padding: 14px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; display: none; text-align: right; }
+    .status-running { background: rgba(14, 165, 233, 0.15); border: 1px solid #0EA5E9; color: #7DD3FC; display: block !important; }
+    .status-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; color: #6EE7B7; display: block !important; }
+    .status-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; color: #FCA5A5; display: block !important; }
+    
+    .steps { margin-top: 24px; padding-top: 18px; border-top: 1px dashed rgba(148, 163, 184, 0.2); text-align: right; }
+    .steps h3 { font-size: 13px; color: #64748B; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .step-item { font-size: 13px; color: #CBD5E1; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; line-height: 1.4; }
+    .step-num { width: 20px; height: 20px; background: #334155; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #38BDF8; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    
+    .brand-footer { margin-top: 24px; padding-top: 18px; border-top: 1px dashed rgba(148, 163, 184, 0.2); text-align: center; }
+    .brand-meta { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+    .brand-icon { width: 22px; height: 22px; background: linear-gradient(135deg, #0EA5E9, #2563EB); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+    .brand-title { font-size: 13px; color: #94A3B8; }
+    .brand-title strong { color: #38BDF8; font-weight: 600; }
+    .brand-sub { font-size: 11.5px; color: #64748B; margin-bottom: 10px; }
+    .brand-links { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; }
+    .brand-link { color: #38BDF8; text-decoration: none; font-weight: 500; }
+    .brand-sep { color: #475569; }
+    
+    #config-modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.95); display: none; align-items: center; justify-content: center;
+      padding: 20px; z-index: 100; backdrop-filter: blur(10px);
+    }
+    .gear-btn {
+      position: absolute; top: 18px; left: 18px; background: none; border: none;
+      font-size: 18px; color: #64748B; cursor: pointer; padding: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <button class="gear-btn" onclick="openConfig()" title="הגדרות קישור">⚙️</button>
+    <img src="icon-192.png" alt="D-Dialog Meeting AI" class="logo-img">
+    <h1>בוט סיכום פגישות AI</h1>
+    <p class="desc">סנכרון הקלטות מ-Google Drive, תמלול חכם ב-Gemini והפקת סיכום מנהלים מובנה ישירות למייל.</p>
+    
+    <button id="runBtn" class="action-btn" onclick="triggerSummarize()">
+      <span>🎙️</span> <span>סכם פגישות עכשיו</span>
+    </button>
+    
+    <a id="directLink" href="#" target="_blank" class="direct-link-btn">
+      <span>↗️</span> <span>פתיחה ישירה בגוגל Apps Script</span>
+    </a>
+    
+    <div id="status-box"></div>
+    
+    <div class="steps">
+      <h3>איך זה עובד?</h3>
+      <div class="step-item"><span class="step-num">1</span> <span>מעלים הקלטה מהטלפון לתיקיית <strong>"הקלטות לפגישות"</strong> ב-Drive.</span></div>
+      <div class="step-item"><span class="step-num">2</span> <span>לוחצים על הכפתור הכחול למעלה.</span></div>
+      <div class="step-item"><span class="step-num">3</span> <span>הסיכום המלא נוחת אצלך במייל וב-Drive תוך שניות!</span></div>
+    </div>
+    
+    <div class="brand-footer">
+      <div class="brand-meta">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-title">נוצר על ידי <strong>D-Dialog</strong></span>
+      </div>
+      <div class="brand-sub">אוטומציה וסוכני AI מתקדמים לעסקים</div>
+      <div class="brand-links">
+        <a href="https://ddialog.co.il" target="_blank" class="brand-link">אתר הבית</a>
+        <span class="brand-sep">•</span>
+        <a href="tel:052-6947202" class="brand-link">052-6947202</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="config-modal">
+    <div class="card">
+      <h2>הגדרות קישור הבוט</h2>
+      <p class="desc" style="margin-top:8px;">כתובת ה-Apps Script Web App שלך:</p>
+      <input type="url" id="cfgUrlInput" style="width:100%;padding:12px;background:#0F172A;border:1px solid #334155;border-radius:10px;color:#fff;font-size:13px;direction:ltr;margin-bottom:16px;">
+      <button class="action-btn" onclick="saveConfig()">שמור והמשך</button>
+      <button class="direct-link-btn" onclick="closeConfig()" style="margin-top:8px;">ביטול</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'ddialog_meeting_bot_url';
+    const DEFAULT_URL = '';
+
+    const CLIENT_REGISTRY = {
+      'ofer': '',
+      'shachaf': ''
+    };
+
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramScript = urlParams.get('script') || urlParams.get('url');
+
+    let activeScriptUrl = CLIENT_REGISTRY[path] || paramScript || localStorage.getItem(STORAGE_KEY) || DEFAULT_URL;
+
+    function updateDirectLink() {
+      const link = document.getElementById('directLink');
+      if (activeScriptUrl) {
+        link.href = activeScriptUrl;
+        link.style.display = 'flex';
+      } else {
+        link.style.display = 'none';
+      }
+    }
+    updateDirectLink();
+
+    function openConfig() {
+      document.getElementById('cfgUrlInput').value = activeScriptUrl;
+      document.getElementById('config-modal').style.display = 'flex';
+    }
+
+    function closeConfig() {
+      document.getElementById('config-modal').style.display = 'none';
+    }
+
+    function saveConfig() {
+      const val = document.getElementById('cfgUrlInput').value.trim();
+      if (val.startsWith('http')) {
+        activeScriptUrl = val;
+        localStorage.setItem(STORAGE_KEY, val);
+        updateDirectLink();
+        closeConfig();
+      }
+    }
+
+    function triggerSummarize() {
+      const btn = document.getElementById('runBtn');
+      const box = document.getElementById('status-box');
+
+      if (!activeScriptUrl) {
+        openConfig();
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> <span>מעבד הקלטות... אנא המתן</span>';
+      box.className = 'status-running';
+      box.innerHTML = '🔍 שולח בקשת סיכום לחשבון הגוגל שלך...<br>(עשוי לקחת כ-30 שניות)';
+
+      window.open(activeScriptUrl, '_blank');
+      
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🎙️</span> <span>סכם פגישות שוב</span>';
+        box.className = 'status-success';
+        box.innerHTML = '✅ הבקשה נשלחה לחשבונך! הסיכום מופק ונשלח ישירות למייל.';
+      }, 2000);
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>
