@@ -205,6 +205,24 @@ function doGet(e) {
     '  <path d="M 68 18 L 70 23 L 75 25 L 70 27 L 68 32 L 66 27 L 61 25 L 66 23 Z" fill="#FDE047" />' +
     '</svg>';
 
+  var manifestObj = {
+    name: "סיכום פגישות - " + BRAND_NAME,
+    short_name: "סיכום פגישות",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0F172A",
+    theme_color: "#0F172A",
+    icons: [
+      {
+        src: APP_ICON_PNG_B64,
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any maskable"
+      }
+    ]
+  };
+  var manifestDataUri = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifestObj));
+
   var html = '<!DOCTYPE html>' +
     '<html lang="he" dir="rtl">' +
     '<head>' +
@@ -216,6 +234,7 @@ function doGet(e) {
     '  <meta name="apple-mobile-web-app-title" content="סיכום פגישות">' +
     '  <meta name="mobile-web-app-capable" content="yes">' +
     '  <meta name="application-name" content="סיכום פגישות">' +
+    '  <link rel="manifest" href="' + manifestDataUri + '">' +
     '  <link rel="icon" type="image/png" sizes="192x192" href="' + APP_ICON_PNG_B64 + '">' +
     '  <link rel="apple-touch-icon" href="' + APP_ICON_PNG_B64 + '">' +
     '  <link rel="apple-touch-icon" sizes="192x192" href="' + APP_ICON_PNG_B64 + '">' +
