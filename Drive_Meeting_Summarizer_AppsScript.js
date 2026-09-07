@@ -238,7 +238,7 @@ function doGet(e) {
     '<body>' +
     '  <div class="card">' +
     '    <div class="logo-container">' +
-    '      <img src="' + APP_ICON_BASE64 + '" alt="D-Dialog Meeting AI" class="logo-img">' +
+    '      <img src="' + APP_ICON_URL + '" alt="D-Dialog Meeting AI" class="logo-img">' +
     '    </div>' +
     '    <h1>בוט סיכום פגישות AI <span style="font-size:11px;background:#0284C7;color:#FFFFFF;padding:3px 8px;border-radius:10px;vertical-align:middle;font-weight:600;margin-right:6px;">' + APP_VERSION + '</span></h1>' +
     '    <p class="desc">סנכרון הקלטות מ-Google Drive, תמלול חכם ב-Gemini והפקת סיכום מנהלים מובנה ישירות למייל.</p>' +
