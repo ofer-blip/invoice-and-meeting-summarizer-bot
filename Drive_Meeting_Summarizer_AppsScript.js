@@ -78,8 +78,12 @@ var PROMPT_MEETING_SUMMARY = "אתה עוזר מקצועי לניהול, תמל�
 "*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר מדויק וריווח מלא בין פסקאות.*";
 
 
-/// פרטי גרסה
+// פרטי גרסה
 var APP_VERSION = "v2.4";
+
+// כתובות אייקון רשמיות וציבוריות (להתקנת PWA, אייקון למסך בית באנדרואיד ו-Favicon במעטפת גוגל)
+var APP_ICON_URL = "https://raw.githubusercontent.com/ofer-blip/invoice-and-meeting-summarizer-bot/main/pwa_meeting/icon-192.png";
+var APP_ICON_512_URL = "https://raw.githubusercontent.com/ofer-blip/invoice-and-meeting-summarizer-bot/main/pwa_meeting/icon-512.png";
 
 // אייקון האפליקציה ב-PNG Base64 (לאייקון מסך בית בנייד ו-Favicon)
 var APP_ICON_PNG_B64 = "data:image/png;base64,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";
@@ -214,8 +218,14 @@ function doGet(e) {
     theme_color: "#0F172A",
     icons: [
       {
-        src: APP_ICON_PNG_B64,
+        src: APP_ICON_URL,
         sizes: "192x192",
+        type: "image/png",
+        purpose: "any maskable"
+      },
+      {
+        src: APP_ICON_512_URL,
+        sizes: "512x512",
         type: "image/png",
         purpose: "any maskable"
       }
@@ -235,11 +245,12 @@ function doGet(e) {
     '  <meta name="mobile-web-app-capable" content="yes">' +
     '  <meta name="application-name" content="סיכום פגישות">' +
     '  <link rel="manifest" href="' + manifestDataUri + '">' +
-    '  <link rel="icon" type="image/png" sizes="192x192" href="' + APP_ICON_PNG_B64 + '">' +
-    '  <link rel="apple-touch-icon" href="' + APP_ICON_PNG_B64 + '">' +
-    '  <link rel="apple-touch-icon" sizes="192x192" href="' + APP_ICON_PNG_B64 + '">' +
-    '  <link rel="apple-touch-icon-precomposed" href="' + APP_ICON_PNG_B64 + '">' +
-    '  <link rel="shortcut icon" href="' + APP_ICON_PNG_B64 + '">' +
+    '  <link rel="icon" type="image/png" sizes="192x192" href="' + APP_ICON_URL + '">' +
+    '  <link rel="shortcut icon" href="' + APP_ICON_URL + '">' +
+    '  <link rel="apple-touch-icon" href="' + APP_ICON_URL + '">' +
+    '  <link rel="apple-touch-icon" sizes="192x192" href="' + APP_ICON_URL + '">' +
+    '  <link rel="apple-touch-icon-precomposed" href="' + APP_ICON_URL + '">' +
+    '  <meta property="og:image" content="' + APP_ICON_URL + '">' +
     '  <title>סיכום פגישות - ' + BRAND_NAME + '</title>' +
     '  <style>' +
     '    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }' +
@@ -349,6 +360,12 @@ function doGet(e) {
     .setTitle("סיכום פגישות - " + BRAND_NAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, user-scalable=no');
+    
+  try {
+    output.setFaviconUrl(APP_ICON_URL);
+  } catch (err) {
+    Logger.log("Favicon notice: " + err.toString());
+  }
     
   return output;
 }
