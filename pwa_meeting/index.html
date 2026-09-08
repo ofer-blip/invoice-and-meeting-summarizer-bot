@@ -221,7 +221,10 @@
           renderCategoryOptions(data.categories);
           return;
         } else if (data && data.error) {
-          console.warn('API returned error:', data.error);
+          if (data.error.includes('PIN')) {
+            select.innerHTML = '<option value="auto">✨ סיווג אוטומטי (AI)</option><option value="" disabled>🔒 נדרש קוד PIN (הזן ב-⚙️)</option>';
+            return;
+          }
         }
       } catch (err) {
         try {
@@ -229,6 +232,9 @@
           const data = await res.json();
           if (data && data.success && Array.isArray(data.categories) && data.categories.length > 0) {
             renderCategoryOptions(data.categories);
+            return;
+          } else if (data && data.error && data.error.includes('PIN')) {
+            select.innerHTML = '<option value="auto">✨ סיווג אוטומטי (AI)</option><option value="" disabled>🔒 נדרש קוד PIN (הזן ב-⚙️)</option>';
             return;
           }
         } catch (fetchErr) {
