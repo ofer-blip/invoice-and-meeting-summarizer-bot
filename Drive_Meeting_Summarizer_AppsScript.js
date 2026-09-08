@@ -132,9 +132,23 @@ function getAvailableCategoriesFromDrive() {
  */
 function doGet(e) {
   // ---------------------------------------------------------
+  // פונקציית אימות קוד אבטחה (PIN)
+  // ---------------------------------------------------------
+  function isPinAuthorized(req) {
+    if (typeof ACCESS_PIN === 'undefined' || !ACCESS_PIN || ACCESS_PIN.toString().trim() === '') {
+      return true; // ללא קוד סודי = פתוח
+    }
+    var providedPin = (req && req.parameter && req.parameter.pin) ? req.parameter.pin.toString().trim() : '';
+    return providedPin === ACCESS_PIN.toString().trim();
+  }
+
+  // ---------------------------------------------------------
   // API Endpoint לסנכרון מקומי (משיכת קבצי MD)
   // ---------------------------------------------------------
   if (e && e.parameter && e.parameter.action === 'sync') {
+    if (!isPinAuthorized(e)) {
+      return ContentService.createTextOutput(JSON.stringify({ error: 'קוד אבטחה (PIN) שגוי או חסר' })).setMimeType(ContentService.MimeType.JSON);
+    }
     try {
       var outputFolder = getOrCreateFolder(FOLDER_OUTPUT_NAME);
       var result = [];
@@ -165,6 +179,58 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
       return ContentService.createTextOutput(JSON.stringify({error: err.toString()})).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // API Endpoint עבור אפליקציית ה-PWA ברשת (הפעלת סיכום פגישות)
+  // ---------------------------------------------------------
+  if (e && e.parameter && (e.parameter.api === 'summarize' || e.parameter.action === 'summarize')) {
+    if (!isPinAuthorized(e)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: "קוד אבטחה (PIN) שגוי או חסר. הגישה נדחתה."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var cat = e.parameter.category || "";
+    if (cat === "auto") cat = "";
+    try {
+      var summaryResult = checkAndSummarizeMeetings(cat);
+      var responsePayload = {
+        success: true,
+        message: summaryResult
+      };
+      return ContentService.createTextOutput(JSON.stringify(responsePayload))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: err.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // API Endpoint עבור קבלת רשימת קטגוריות זמינות מ-Drive
+  // ---------------------------------------------------------
+  if (e && e.parameter && e.parameter.api === 'categories') {
+    if (!isPinAuthorized(e)) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: "קוד אבטחה (PIN) שגוי או חסר."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    try {
+      var cats = getAvailableCategoriesFromDrive();
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        categories: cats
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: err.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
     }
   }
 

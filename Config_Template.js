@@ -26,3 +26,6 @@ var BRAND_NAME = "D-Dialog";
 var BRAND_TAGLINE = "אוטומציה וסוכני AI מתקדמים לעסקים";
 var BRAND_WEBSITE = "https://ddialog.co.il";
 var BRAND_PHONE = "052-6947202";
+
+// 6. קוד אבטחה סודי (PIN) להגנה מפני גישה זרה (השאר ריק "" ללא נעילה, או קבע 4-6 ספרות למשל "7420")
+var ACCESS_PIN = "";
