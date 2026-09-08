@@ -949,6 +949,10 @@ function appendToMasterGoogleDoc(summaryText, category, meetingTitle, dateStr, f
  * תומך בקבצים קטנים וגדולים ללא שגיאת מגבלת Payload של URLFetch.
  */
 function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
+  if (typeof GEMINI_API_KEY === 'undefined' || !GEMINI_API_KEY || GEMINI_API_KEY.trim() === '') {
+    throw new Error("מפתח Gemini API חסר. אנא הגדר את GEMINI_API_KEY בקובץ Config.gs.");
+  }
+  var apiKey = GEMINI_API_KEY.trim();
   var fileSize = file.getSize();
   var blob = file.getBlob();
   var fileName = file.getName();
@@ -957,7 +961,7 @@ function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
   if (fileSize < 4 * 1024 * 1024) {
     Logger.log("⚡ קובץ קל (" + (fileSize / (1024*1024)).toFixed(2) + " MB) - מעבד ב-Inline Base64...");
     var audioBase64 = Utilities.base64Encode(blob.getBytes());
-    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + apiKey;
     
     var payload = {
       "contents": [
@@ -995,7 +999,7 @@ function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
   // לקבצים גדולים (4MB ומעלה) - שימוש ב-Gemini Files API להעלאת קובץ בינארי מלא
   Logger.log("📁 קובץ גדול מזוהה (" + (fileSize / (1024*1024)).toFixed(2) + " MB) - מעלה ישירות ל-Gemini Files API...");
   
-  var initUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?key=" + GEMINI_API_KEY;
+  var initUrl = "https://generativelanguage.googleapis.com/upload/v1beta/files?key=" + apiKey;
   var initHeaders = {
     "X-Goog-Upload-Protocol": "resumable",
     "X-Goog-Upload-Command": "start",
@@ -1038,7 +1042,7 @@ function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
   Logger.log("✓ הקובץ הועלה ל-Gemini בהצלחה: " + fileUri);
   
   // הפקת הסיכום באמצעות ה-URI של הקובץ שהועלה
-  var genUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + GEMINI_API_KEY;
+  var genUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent?key=" + apiKey;
   var genPayload = {
     "contents": [
       {
