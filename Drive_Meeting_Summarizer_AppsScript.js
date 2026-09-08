@@ -143,11 +143,24 @@ function doGet(e) {
   }
 
   // ---------------------------------------------------------
+  // פונקציית החזרת API תואמת JSON ו-JSONP
+  // ---------------------------------------------------------
+  function makeApiResponse(data, req) {
+    var jsonString = JSON.stringify(data);
+    if (req && req.parameter && req.parameter.callback) {
+      return ContentService.createTextOutput(req.parameter.callback + '(' + jsonString + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return ContentService.createTextOutput(jsonString)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ---------------------------------------------------------
   // API Endpoint לסנכרון מקומי (משיכת קבצי MD)
   // ---------------------------------------------------------
   if (e && e.parameter && e.parameter.action === 'sync') {
     if (!isPinAuthorized(e)) {
-      return ContentService.createTextOutput(JSON.stringify({ error: 'קוד אבטחה (PIN) שגוי או חסר' })).setMimeType(ContentService.MimeType.JSON);
+      return makeApiResponse({ error: 'קוד אבטחה (PIN) שגוי או חסר' }, e);
     }
     try {
       var outputFolder = getOrCreateFolder(FOLDER_OUTPUT_NAME);
@@ -176,9 +189,9 @@ function doGet(e) {
         }
       }
       
-      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+      return makeApiResponse(result, e);
     } catch (err) {
-      return ContentService.createTextOutput(JSON.stringify({error: err.toString()})).setMimeType(ContentService.MimeType.JSON);
+      return makeApiResponse({ error: err.toString() }, e);
     }
   }
 
@@ -187,10 +200,10 @@ function doGet(e) {
   // ---------------------------------------------------------
   if (e && e.parameter && (e.parameter.api === 'summarize' || e.parameter.action === 'summarize')) {
     if (!isPinAuthorized(e)) {
-      return ContentService.createTextOutput(JSON.stringify({
+      return makeApiResponse({
         success: false,
         error: "קוד אבטחה (PIN) שגוי או חסר. הגישה נדחתה."
-      })).setMimeType(ContentService.MimeType.JSON);
+      }, e);
     }
     var cat = e.parameter.category || "";
     if (cat === "auto") cat = "";
@@ -200,13 +213,12 @@ function doGet(e) {
         success: true,
         message: summaryResult
       };
-      return ContentService.createTextOutput(JSON.stringify(responsePayload))
-        .setMimeType(ContentService.MimeType.JSON);
+      return makeApiResponse(responsePayload, e);
     } catch (err) {
-      return ContentService.createTextOutput(JSON.stringify({
+      return makeApiResponse({
         success: false,
         error: err.toString()
-      })).setMimeType(ContentService.MimeType.JSON);
+      }, e);
     }
   }
 
@@ -215,22 +227,22 @@ function doGet(e) {
   // ---------------------------------------------------------
   if (e && e.parameter && e.parameter.api === 'categories') {
     if (!isPinAuthorized(e)) {
-      return ContentService.createTextOutput(JSON.stringify({
+      return makeApiResponse({
         success: false,
         error: "קוד אבטחה (PIN) שגוי או חסר."
-      })).setMimeType(ContentService.MimeType.JSON);
+      }, e);
     }
     try {
       var cats = getAvailableCategoriesFromDrive();
-      return ContentService.createTextOutput(JSON.stringify({
+      return makeApiResponse({
         success: true,
         categories: cats
-      })).setMimeType(ContentService.MimeType.JSON);
+      }, e);
     } catch (err) {
-      return ContentService.createTextOutput(JSON.stringify({
+      return makeApiResponse({
         success: false,
         error: err.toString()
-      })).setMimeType(ContentService.MimeType.JSON);
+      }, e);
     }
   }
 

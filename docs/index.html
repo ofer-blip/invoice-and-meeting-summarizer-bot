@@ -87,8 +87,7 @@
       <label for="categorySelect">סווג לתיקיית יעד:</label>
       <select id="categorySelect">
         <option value="auto">✨ סיווג אוטומטי (AI)</option>
-        <option value="עסקים">🏢 עסקים</option>
-        <option value="גפ&quot;ן">🏫 גפ"ן</option>
+        <option value="" disabled>🔄 טוען תיקיות מ-Drive...</option>
       </select>
     </div>
 
@@ -168,31 +167,72 @@
     }
     updateDirectLink();
 
+    // JSONP loader helper to bypass CORS across all browsers
+    function fetchJsonp(url) {
+      return new Promise((resolve, reject) => {
+        const cbName = 'jsonp_cb_' + Math.round(100000 * Math.random());
+        window[cbName] = function(data) {
+          delete window[cbName];
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+          resolve(data);
+        };
+        const sep = url.includes('?') ? '&' : '?';
+        const script = document.createElement('script');
+        script.src = url + sep + 'callback=' + cbName;
+        script.onerror = function(err) {
+          delete window[cbName];
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+          reject(err);
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    function renderCategoryOptions(categories) {
+      const select = document.getElementById('categorySelect');
+      select.innerHTML = '<option value="auto">✨ סיווג אוטומטי (AI)</option>';
+      categories.forEach(cat => {
+        let icon = '📁';
+        if (cat.includes('עסק')) icon = '🏢';
+        else if (cat.includes('גפ') || cat.includes('חינוך') || cat.includes('כית') || cat.includes('לילך')) icon = '🏫';
+        else if (cat.includes('גוונ')) icon = '🎨';
+        else if (cat.includes('שיווק') || cat.includes('מכיר')) icon = '📢';
+        else if (cat.includes('פיתוח') || cat.includes('דיגיט')) icon = '💻';
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = `${icon} ${cat}`;
+        select.appendChild(opt);
+      });
+    }
+
     // Fetch dynamic categories from Drive if URL is set
     async function loadDynamicCategories() {
-      if (!activeScriptUrl || !activeScriptUrl.startsWith('http')) return;
-      try {
-        let catApiUrl = activeScriptUrl + (activeScriptUrl.includes('?') ? '&' : '?') + 'api=categories';
-        if (activePin) catApiUrl += '&pin=' + encodeURIComponent(activePin);
-        const res = await fetch(catApiUrl);
-        const data = await res.json();
-        if (data && data.success && Array.isArray(data.categories) && data.categories.length > 0) {
-          const select = document.getElementById('categorySelect');
-          select.innerHTML = '<option value="auto">✨ סיווג אוטומטי (AI)</option>';
-          data.categories.forEach(cat => {
-            let icon = '📁';
-            if (cat.includes('עסק')) icon = '🏢';
-            else if (cat.includes('גפ') || cat.includes('חינוך') || cat.includes('כית') || cat.includes('לילך')) icon = '🏫';
-            else if (cat.includes('גוונ')) icon = '🎨';
-            const opt = document.createElement('option');
-            opt.value = cat;
-            opt.textContent = `${icon} ${cat}`;
-            select.appendChild(opt);
-          });
-        }
-      } catch (e) {
-        // Fallback to defaults
+      if (!activeScriptUrl || !activeScriptUrl.startsWith('http')) {
+        renderCategoryOptions(['עסקים', 'גפ"ן']);
+        return;
       }
+      let catApiUrl = activeScriptUrl + (activeScriptUrl.includes('?') ? '&' : '?') + 'api=categories';
+      if (activePin) catApiUrl += '&pin=' + encodeURIComponent(activePin);
+
+      try {
+        const data = await fetchJsonp(catApiUrl);
+        if (data && data.success && Array.isArray(data.categories) && data.categories.length > 0) {
+          renderCategoryOptions(data.categories);
+          return;
+        }
+      } catch (err) {
+        try {
+          const res = await fetch(catApiUrl);
+          const data = await res.json();
+          if (data && data.success && Array.isArray(data.categories) && data.categories.length > 0) {
+            renderCategoryOptions(data.categories);
+            return;
+          }
+        } catch (fetchErr) {
+          console.log('Categories load notice:', fetchErr);
+        }
+      }
+      renderCategoryOptions(['עסקים', 'גפ"ן']);
     }
     loadDynamicCategories();
 
