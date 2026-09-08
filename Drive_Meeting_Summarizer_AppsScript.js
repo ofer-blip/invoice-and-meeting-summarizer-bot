@@ -1026,7 +1026,6 @@ function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
   var uploadResponse = UrlFetchApp.fetch(uploadUrl, {
     "method": "post",
     "headers": {
-      "Content-Length": fileSize.toString(),
       "X-Goog-Upload-Offset": "0",
       "X-Goog-Upload-Command": "upload, finalize"
     },
