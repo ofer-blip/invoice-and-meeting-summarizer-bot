@@ -1022,6 +1022,7 @@ function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
   }
   
   // העלאת הקובץ הבינארי ישירות לשרתי גוגל
+  blob.setContentType(audioMime);
   var uploadResponse = UrlFetchApp.fetch(uploadUrl, {
     "method": "post",
     "headers": {
@@ -1029,7 +1030,7 @@ function callGeminiWithAudio(file, audioMime, dynamicPrompt) {
       "X-Goog-Upload-Offset": "0",
       "X-Goog-Upload-Command": "upload, finalize"
     },
-    "payload": blob.getBytes(),
+    "payload": blob,
     "muteHttpExceptions": true
   });
   
