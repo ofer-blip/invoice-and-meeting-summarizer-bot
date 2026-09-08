@@ -6,7 +6,7 @@
  */
 
 // הגדרות מערכת ומפתחות
-var GEMINI_API_KEY = "AQ.Ab8RN6IL8JL8EC1V4LyOTMwZakgkenawg4RFmX7-0A5YMA0Gyg";
+var GEMINI_API_KEY = "";
 var GEMINI_MODEL = "gemini-2.5-flash";
 
 // פרטי מיתוג ויוצר (D-Dialog)
