@@ -207,8 +207,9 @@
 
     // Fetch dynamic categories from Drive if URL is set
     async function loadDynamicCategories() {
+      const select = document.getElementById('categorySelect');
       if (!activeScriptUrl || !activeScriptUrl.startsWith('http')) {
-        renderCategoryOptions(['עסקים', 'גפ"ן']);
+        select.innerHTML = '<option value="auto">✨ סיווג אוטומטי (AI)</option><option value="" disabled>⚙️ הגדר קישור מנוע בהגדרות</option>';
         return;
       }
       let catApiUrl = activeScriptUrl + (activeScriptUrl.includes('?') ? '&' : '?') + 'api=categories';
@@ -219,6 +220,8 @@
         if (data && data.success && Array.isArray(data.categories) && data.categories.length > 0) {
           renderCategoryOptions(data.categories);
           return;
+        } else if (data && data.error) {
+          console.warn('API returned error:', data.error);
         }
       } catch (err) {
         try {
@@ -229,10 +232,12 @@
             return;
           }
         } catch (fetchErr) {
-          console.log('Categories load notice:', fetchErr);
+          console.log('Categories fetch notice:', fetchErr);
         }
       }
-      renderCategoryOptions(['עסקים', 'גפ"ן']);
+      
+      // If categories could not be fetched dynamically, keep Auto-classify
+      select.innerHTML = '<option value="auto">✨ סיווג אוטומטי (AI)</option>';
     }
     loadDynamicCategories();
 
