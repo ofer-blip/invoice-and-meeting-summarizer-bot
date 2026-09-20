@@ -637,11 +637,11 @@ function getOrCreateFolder(folderName) {
   if (!folderName) {
     folderName = FOLDER_INPUT_NAME;
   }
-  var folders = DriveApp.getFoldersByName(folderName);
+  var folders = DriveApp.getRootFolder().getFoldersByName(folderName);
   if (folders.hasNext()) {
     return folders.next();
   }
-  return DriveApp.createFolder(folderName);
+  return DriveApp.getRootFolder().createFolder(folderName);
 }
 
 function getOrCreateSubFolder(parentFolder, subFolderName) {

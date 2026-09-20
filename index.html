@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" type="image/png" href="https://ofer-blip.github.io/ddialog-assets/Invoice_Bot_icon.jpg">
+  <link rel="apple-touch-icon" href="https://ofer-blip.github.io/ddialog-assets/Invoice_Bot_icon.jpg">
+  <title>בוט חשבוניות - D-Dialog</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background: #0F172A; color: #F8FAFC; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; direction: rtl; text-align: center; }
+    .card { background: #1E293B; border: 1px solid #334155; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 440px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); position: relative; }
+    .logo-container { margin-bottom: 20px; display: inline-block; }
+    .logo-img { width: 76px; height: 76px; border-radius: 20px; box-shadow: 0 10px 20px -3px rgba(16, 185, 129, 0.4); object-fit: cover; display: block; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #FFFFFF; }
+    p.desc { font-size: 14px; color: #94A3B8; margin-bottom: 24px; line-height: 1.5; }
+    .selectors { display: flex; gap: 12px; margin-bottom: 20px; justify-content: center; }
+    .select-group { flex: 1; text-align: right; }
+    .select-group label { display: block; font-size: 12px; color: #94A3B8; margin-bottom: 6px; font-weight: 600; }
+    select { width: 100%; padding: 12px 14px; background: #0F172A; border: 1px solid #334155; border-radius: 12px; color: #FFFFFF; font-size: 15px; outline: none; direction: rtl; cursor: pointer; }
+    select:focus { border-color: #10B981; }
+    .action-btn {
+      width: 100%; padding: 18px 20px; font-size: 17px; font-weight: 700; color: #FFFFFF;
+      background: linear-gradient(135deg, #10B981, #059669); border: none; border-radius: 16px;
+      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .action-btn:active { transform: scale(0.98); opacity: 0.9; }
+    .action-btn:disabled { background: #475569; color: #94A3B8; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .config-btn {
+      position: absolute; top: 20px; left: 20px; background: none; border: none; color: #64748B; font-size: 20px; cursor: pointer; transition: color 0.2s;
+    }
+    .config-btn:hover { color: #94A3B8; }
+
+    #status-box { margin-top: 24px; padding: 14px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; display: none; text-align: right; }
+    .status-running { background: rgba(59, 130, 246, 0.15); border: 1px solid #3B82F6; color: #93C5FD; display: block !important; }
+    .status-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; color: #6EE7B7; display: block !important; }
+    .status-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; color: #FCA5A5; display: block !important; }
+    
+    .brand-footer { margin-top: 26px; padding-top: 18px; border-top: 1px dashed rgba(148, 163, 184, 0.2); text-align: center; }
+    .brand-meta { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+    .brand-icon { width: 22px; height: 22px; background: linear-gradient(135deg, #3B82F6, #1D4ED8); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+    .brand-title { font-size: 13px; color: #94A3B8; }
+    .brand-title strong { color: #38BDF8; font-weight: 600; }
+    .brand-sub { font-size: 11.5px; color: #64748B; margin-bottom: 10px; }
+    .brand-links { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; }
+    .brand-link { color: #38BDF8; text-decoration: none; transition: color 0.2s; font-weight: 500; }
+    .brand-link:hover { color: #7DD3FC; text-decoration: underline; }
+    .brand-sep { color: #475569; }
+
+    /* Modal */
+    #config-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8);
+      display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+    }
+    .modal-content {
+      background: #1E293B; border: 1px solid #334155; border-radius: 20px; padding: 24px; width: 100%; max-width: 400px; text-align: right; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .modal-content h2 { font-size: 18px; color: #FFFFFF; margin-bottom: 16px; }
+    .modal-content input {
+      width: 100%; padding: 12px; background: #0F172A; border: 1px solid #334155; border-radius: 10px; color: #FFFFFF; font-size: 14px; margin-bottom: 16px; direction: ltr; text-align: left;
+    }
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .modal-btn.save { background: #3B82F6; color: #FFFFFF; }
+    .modal-btn.save:hover { background: #2563EB; }
+    .modal-btn.cancel { background: #475569; color: #FFFFFF; }
+    .modal-btn.cancel:hover { background: #334155; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <button class="config-btn" onclick="openConfig()" title="הגדרות חיבור">⚙️</button>
+    
+    <div class="logo-container">
+      <img src="https://ofer-blip.github.io/ddialog-assets/Invoice_Bot_icon.jpg" alt="D-Dialog Invoice Bot" class="logo-img" id="dynamicLogo">
+    </div>
+    <h1 id="brandTitle">בוט חשבוניות וקבלות AI</h1>
+    <p class="desc">סריקת מיילים אוטומטית, חילוץ חשבוניות ב-Gemini, סידור ב-Drive והפקת גיליון Sheets מרכז.</p>
+    
+    <div class="selectors">
+      <div class="select-group">
+        <label for="selMonth">חודש לסריקה:</label>
+        <select id="selMonth">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      <div class="select-group">
+        <label for="selYear">שנה:</label>
+        <select id="selYear">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+    </div>
+    
+    <button id="runBtn" class="action-btn" onclick="startScan()">
+      <span>🚀</span> <span>סרוק חשבוניות עכשיו</span>
+    </button>
+    
+    <button id="zipBtn" class="action-btn" style="background-color:#4F46E5; margin-top:15px;" onclick="downloadZip()">
+      <span>🖨️</span> <span>הורד מסמכי חודש נבחר להדפסה (ZIP)</span>
+    </button>
+    
+    <div id="status-box"></div>
+    
+    <div class="brand-footer">
+      <div class="brand-meta">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-title">נוצר על ידי <strong>D-Dialog</strong></span>
+      </div>
+      <div class="brand-sub">אוטומציות חכמות ופיתוח AI לעסקים</div>
+      <div class="brand-links">
+        <a href="https://ddialog.co.il" target="_blank" class="brand-link">🌐 לאתר הרשמי</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="config-modal">
+    <div class="modal-content">
+      <h2>הגדרות חיבור</h2>
+      <p style="color: #94A3B8; font-size: 13px; margin-bottom: 8px;">כתובת ה-Web App (Apps Script):</p>
+      <input type="text" id="cfgUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <p style="color: #94A3B8; font-size: 13px; margin-bottom: 8px;">קוד גישה (PIN):</p>
+      <input type="password" id="cfgPinInput" placeholder="1234">
+      <div class="modal-actions">
+        <button class="modal-btn save" onclick="saveConfig()">שמור והתחבר</button>
+        <button class="modal-btn cancel" onclick="closeConfig()">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize dates
+    const d = new Date();
+    const currentMonth = d.getMonth() + 1;
+    const currentYear = d.getFullYear();
+    
+    const selMonth = document.getElementById("selMonth");
+    for (let i = 1; i <= 12; i++) {
+      let opt = document.createElement("option");
+      opt.value = i;
+      opt.text = i + " (" + (i < 10 ? '0'+i : i) + ")";
+      if (i === currentMonth) opt.selected = true;
+      selMonth.appendChild(opt);
+    }
+    
+    const selYear = document.getElementById("selYear");
+    for (let i = currentYear - 1; i <= currentYear + 1; i++) {
+      let opt = document.createElement("option");
+      opt.value = i;
+      opt.text = i;
+      if (i === currentYear) opt.selected = true;
+      selYear.appendChild(opt);
+    }
+
+    const STORAGE_KEY = 'invoice_bot_script_url';
+    const PIN_KEY = 'invoice_bot_pin';
+    let activeScriptUrl = localStorage.getItem(STORAGE_KEY) || '';
+    let activePin = localStorage.getItem(PIN_KEY) || '';
+
+    // Check URL parameters for initial setup
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramUrl = urlParams.get('url');
+    if (paramUrl && paramUrl.startsWith('http')) {
+      activeScriptUrl = paramUrl;
+      localStorage.setItem(STORAGE_KEY, paramUrl);
+    }
+    const paramPin = urlParams.get('pin');
+    if (paramPin) {
+      activePin = paramPin;
+      localStorage.setItem(PIN_KEY, paramPin);
+    }
+
+    function openConfig() {
+      document.getElementById('cfgUrlInput').value = activeScriptUrl;
+      document.getElementById('cfgPinInput').value = activePin;
+      document.getElementById('config-modal').style.display = 'flex';
+    }
+
+    function closeConfig() {
+      document.getElementById('config-modal').style.display = 'none';
+    }
+
+    function saveConfig() {
+      const val = document.getElementById('cfgUrlInput').value.trim();
+      const pinVal = document.getElementById('cfgPinInput').value.trim();
+      if (val.startsWith('http')) {
+        activeScriptUrl = val;
+        activePin = pinVal;
+        localStorage.setItem(STORAGE_KEY, val);
+        localStorage.setItem(PIN_KEY, pinVal);
+        closeConfig();
+      } else {
+        alert('אנא הזן כתובת אינטרנט חוקית שמתחילה ב-https://');
+      }
+    }
+
+    let totalProcessed = 0;
+
+    async function startScan() {
+      if (!activeScriptUrl || !activeScriptUrl.startsWith('http')) {
+        openConfig();
+        return;
+      }
+      totalProcessed = 0;
+      var btn = document.getElementById("runBtn");
+      var box = document.getElementById("status-box");
+      btn.disabled = true;
+      btn.innerHTML = "<span>⏳</span> <span>מתחיל סריקה...</span>";
+      box.className = "status-running";
+      box.innerHTML = "🔍 מתחיל סריקת מיילים... (אנא המתן, הפעולה עשויה לקחת דקה)";
+      runBatch();
+    }
+
+    async function runBatch() {
+      var m = document.getElementById("selMonth").value;
+      var y = document.getElementById("selYear").value;
+      var box = document.getElementById("status-box");
+      var btn = document.getElementById("runBtn");
+
+      let targetApiUrl = activeScriptUrl + (activeScriptUrl.includes('?') ? '&' : '?') + 'api=scan&year=' + y + '&month=' + m;
+      if (activePin) targetApiUrl += '&pin=' + encodeURIComponent(activePin);
+
+      try {
+        const response = await fetch(targetApiUrl);
+        const res = await response.json();
+        
+        if (res.error || res.success === false) {
+          btn.disabled = false;
+          btn.innerHTML = "<span>🔄</span> <span>נסה שוב</span>";
+          box.className = "status-error";
+          box.innerHTML = "❌ שגיאה: " + (res.error || "הפעולה נכשלה.");
+        } else if (res.status === 'partial') {
+          totalProcessed += res.count;
+          btn.innerHTML = "<span>⏳</span> <span>ממשיך למנה הבאה...</span>";
+          box.innerHTML = "🔄 סורק מנה נוספת... עד כה עובדו " + totalProcessed + " מסמכים. (אין לסגור את העמוד!)";
+          runBatch();
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = "<span>🚀</span> <span>סרוק שוב</span>";
+          box.className = "status-success";
+          box.innerHTML = res.htmlMessage || "✅ הסריקה הסתיימה בהצלחה.";
+        }
+      } catch (err) {
+        // Fallback for CORS redirect
+        try {
+          await fetch(targetApiUrl, { mode: 'no-cors' });
+          btn.disabled = false;
+          btn.innerHTML = "<span>🚀</span> <span>סרוק שוב</span>";
+          box.className = "status-success";
+          box.innerHTML = "✅ הפקודה נשלחה בהצלחה לשרת! (CORS Fallback)";
+        } catch (fallbackErr) {
+          btn.disabled = false;
+          btn.innerHTML = "<span>🔄</span> <span>נסה שוב</span>";
+          box.className = "status-error";
+          box.innerHTML = "❌ שגיאה: לא הצלחנו להתחבר לשרת Google Apps Script. ודא שהקישור בהגדרות תקין.";
+        }
+      }
+    }
+
+    async function downloadZip() {
+      if (!activeScriptUrl || !activeScriptUrl.startsWith('http')) {
+        openConfig();
+        return;
+      }
+      var btn = document.getElementById("zipBtn");
+      var box = document.getElementById("status-box");
+      var m = document.getElementById("selMonth").value;
+      var y = document.getElementById("selYear").value;
+      
+      btn.disabled = true;
+      btn.innerHTML = "<span>⏳</span> <span>מייצר קובץ ZIP...</span>";
+      box.className = "status-running";
+      box.innerHTML = "📦 אורז את כל החשבוניות לקובץ אחד להדפסה, אנא המתן...";
+
+      let targetApiUrl = activeScriptUrl + (activeScriptUrl.includes('?') ? '&' : '?') + 'api=zip&year=' + y + '&month=' + m;
+      if (activePin) targetApiUrl += '&pin=' + encodeURIComponent(activePin);
+
+      try {
+        const response = await fetch(targetApiUrl);
+        const url = await response.json();
+        
+        btn.disabled = false;
+        btn.innerHTML = "<span>🖨️</span> <span>הורד מסמכי חודש נבחר להדפסה (ZIP)</span>";
+        if (url && url.error) {
+          box.className = "status-error";
+          box.innerHTML = "❌ שגיאה: " + url.error;
+        } else if (url && typeof url === 'string' && url.startsWith('http')) {
+          box.className = "status-success";
+          box.innerHTML = "✅ קובץ ה-ZIP מוכן! <br><br><a href='" + url + "' target='_blank' style='display:inline-block; padding:10px 15px; background:#4F46E5; color:white; text-decoration:none; border-radius:6px; font-weight:bold;'>⬇️ לחץ כאן להורדת הקובץ</a>";
+        } else {
+          box.className = "status-error";
+          box.innerHTML = "❌ לא נמצאו קבצים בחודש זה או שהתיקייה לא קיימת.";
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = "<span>🖨️</span> <span>הורד מסמכי חודש נבחר להדפסה (ZIP)</span>";
+        box.className = "status-error";
+        box.innerHTML = "❌ שגיאה ביצירת ה-ZIP. בדוק האם הרצת קודם סריקה ואם הקבצים קיימים בדרייב.";
+      }
+    }
+  </script>
+</body>
+</html>

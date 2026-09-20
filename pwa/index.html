@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="בוט חשבוניות">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="D-Dialog | בוט חשבוניות וקבלות AI">
+  <meta property="og:description" content="סריקת מיילים אוטומטית, חילוץ חשבוניות ב-Gemini, סידור ב-Drive והפקת גיליון Sheets מרכז.">
+  <meta property="og:image" content="https://ddialog-invoices.web.app/og-image.jpg">
+  <meta property="og:image:width" content="600">
+  <meta property="og:image:height" content="600">
+  
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <title>D-Dialog | בוט חשבוניות AI</title>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background: #0F172A; color: #F8FAFC; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; direction: rtl; text-align: center; }
+    .card { background: #1E293B; border: 1px solid #334155; border-radius: 24px; padding: 32px 24px; width: 100%; max-width: 440px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); position: relative; }
+    .logo-img { width: 80px; height: 80px; border-radius: 20px; box-shadow: 0 10px 20px -3px rgba(16, 185, 129, 0.4); object-fit: cover; margin-bottom: 18px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #FFFFFF; }
+    p.desc { font-size: 14px; color: #94A3B8; margin-bottom: 22px; line-height: 1.5; }
+    .selectors { display: flex; gap: 12px; margin-bottom: 20px; justify-content: center; }
+    .select-group { flex: 1; text-align: right; }
+    .select-group label { display: block; font-size: 12px; color: #94A3B8; margin-bottom: 6px; font-weight: 600; }
+    select { width: 100%; padding: 12px 14px; background: #0F172A; border: 1px solid #334155; border-radius: 12px; color: #FFFFFF; font-size: 15px; outline: none; direction: rtl; cursor: pointer; }
+    select:focus { border-color: #10B981; }
+    .action-btn {
+      width: 100%; padding: 18px 20px; font-size: 17px; font-weight: 700; color: #FFFFFF;
+      background: linear-gradient(135deg, #10B981, #059669); border: none; border-radius: 16px;
+      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+      display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px;
+    }
+    .action-btn:active { transform: scale(0.98); }
+    .action-btn:disabled { background: #475569; color: #94A3B8; cursor: not-allowed; transform: none; box-shadow: none; }
+    
+    .direct-link-btn {
+      width: 100%; padding: 13px; font-size: 14px; font-weight: 600; color: #38BDF8;
+      background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+    }
+    
+    #status-box { margin-top: 20px; padding: 14px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; display: none; text-align: right; }
+    .status-running { background: rgba(59, 130, 246, 0.15); border: 1px solid #3B82F6; color: #93C5FD; display: block !important; }
+    .status-success { background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; color: #6EE7B7; display: block !important; }
+    .status-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #EF4444; color: #FCA5A5; display: block !important; }
+    
+    .brand-footer { margin-top: 24px; padding-top: 18px; border-top: 1px dashed rgba(148, 163, 184, 0.2); text-align: center; }
+    .brand-meta { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+    .brand-icon { width: 22px; height: 22px; background: linear-gradient(135deg, #3B82F6, #1D4ED8); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+    .brand-title { font-size: 13px; color: #94A3B8; }
+    .brand-title strong { color: #38BDF8; font-weight: 600; }
+    .brand-sub { font-size: 11.5px; color: #64748B; margin-bottom: 10px; }
+    .brand-links { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 12px; }
+    .brand-link { color: #38BDF8; text-decoration: none; font-weight: 500; }
+    .brand-sep { color: #475569; }
+    
+    /* Config Modal */
+    #config-modal {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.95); display: none; align-items: center; justify-content: center;
+      padding: 20px; z-index: 100; backdrop-filter: blur(10px);
+    }
+    .gear-btn {
+      position: absolute; top: 18px; left: 18px; background: none; border: none;
+      font-size: 18px; color: #64748B; cursor: pointer; padding: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <button class="gear-btn" onclick="openConfig()" title="הגדרות קישור">⚙️</button>
+    <img src="icon-192.png" alt="D-Dialog Invoice Bot" class="logo-img">
+    <h1>בוט חשבוניות וקבלות AI</h1>
+    <p class="desc">סריקת מיילים אוטומטית, חילוץ חשבוניות ב-Gemini, סידור ב-Drive והפקת גיליון Sheets מרכז.</p>
+    
+    <div class="selectors">
+      <div class="select-group">
+        <label for="selMonth">חודש לסריקה:</label>
+        <select id="selMonth">
+          <option value="1">ינואר (01)</option>
+          <option value="2">פברואר (02)</option>
+          <option value="3">מרץ (03)</option>
+          <option value="4">אפריל (04)</option>
+          <option value="5">מאי (05)</option>
+          <option value="6">יוני (06)</option>
+          <option value="7">יולי (07)</option>
+          <option value="8">אוגוסט (08)</option>
+          <option value="9">ספטמבר (09)</option>
+          <option value="10">אוקטובר (10)</option>
+          <option value="11">נובמבר (11)</option>
+          <option value="12">דצמבר (12)</option>
+        </select>
+      </div>
+      <div class="select-group">
+        <label for="selYear">שנה:</label>
+        <select id="selYear">
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+          <option value="2027">2027</option>
+          <option value="2028">2028</option>
+          <option value="2029">2029</option>
+        </select>
+      </div>
+    </div>
+    
+    <button id="runBtn" class="action-btn" onclick="triggerScan()">
+      <span>🚀</span> <span>סרוק חשבוניות עכשיו</span>
+    </button>
+    
+    <a id="directLink" href="#" target="_blank" class="direct-link-btn">
+      <span>↗️</span> <span>פתיחה ישירה בדפדפן / גוגל</span>
+    </a>
+    
+    <div id="status-box"></div>
+    
+    <!-- פוטר מיתוג D-Dialog -->
+    <div class="brand-footer">
+      <div class="brand-meta">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-title">נוצר על ידי <strong>D-Dialog</strong></span>
+      </div>
+      <div class="brand-sub">אוטומציה וסוכני AI מתקדמים לעסקים</div>
+      <div class="brand-links">
+        <a href="https://ddialog.co.il/%D7%94%D7%9B%D7%95%D7%95%D7%A0%D7%94" target="_blank" class="brand-link">🌐 לתוכנית הליווי וה-AI</a>
+        <span class="brand-sep">•</span>
+        <a href="https://api.whatsapp.com/send?phone=972500000000" target="_blank" class="brand-link">💬 וואטסאפ / תמיכה</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config Modal -->
+  <div id="config-modal">
+    <div class="card">
+      <h2>הגדרות קישור הבוט</h2>
+      <p class="desc" style="margin-top:8px;">כתובת ה-Apps Script Web App שלך:</p>
+      <input type="url" id="cfgUrlInput" style="width:100%;padding:12px;background:#0F172A;border:1px solid #334155;border-radius:10px;color:#fff;font-size:13px;direction:ltr;margin-bottom:16px;">
+      <button class="action-btn" onclick="saveConfig()">שמור והמשך</button>
+      <button class="direct-link-btn" onclick="closeConfig()" style="margin-top:8px;">ביטול</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'ddialog_invoice_bot_url';
+    const DEFAULT_OFER_URL = 'https://script.google.com/macros/s/AKfycbwhbVeSnVUP0CRxfyYVdCYdPMSnmSzXqmujbE6El3906_Gvd634vIUVD7xCWYhKhpUb/exec';
+    
+    const CLIENT_REGISTRY = {
+      'ofer': DEFAULT_OFER_URL,
+      'client_name': ''
+    };
+
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramScript = urlParams.get('script') || urlParams.get('url');
+
+    let activeScriptUrl = CLIENT_REGISTRY[path] || paramScript || localStorage.getItem(STORAGE_KEY) || DEFAULT_OFER_URL;
+    localStorage.setItem(STORAGE_KEY, activeScriptUrl);
+
+    // Set default month to previous month
+    const now = new Date();
+    const curMonth = now.getMonth() + 1;
+    const defMonth = curMonth === 1 ? 12 : curMonth - 1;
+    document.getElementById('selMonth').value = defMonth;
+
+    // Direct link button
+    document.getElementById('directLink').href = activeScriptUrl;
+
+    function openConfig() {
+      document.getElementById('cfgUrlInput').value = activeScriptUrl;
+      document.getElementById('config-modal').style.display = 'flex';
+    }
+
+    function closeConfig() {
+      document.getElementById('config-modal').style.display = 'none';
+    }
+
+    function saveConfig() {
+      const val = document.getElementById('cfgUrlInput').value.trim();
+      if (val.startsWith('http')) {
+        activeScriptUrl = val;
+        localStorage.setItem(STORAGE_KEY, val);
+        document.getElementById('directLink').href = val;
+        closeConfig();
+      }
+    }
+
+    function triggerScan() {
+      const m = document.getElementById('selMonth').value;
+      const y = document.getElementById('selYear').value;
+      const btn = document.getElementById('runBtn');
+      const box = document.getElementById('status-box');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> <span>מעבד חשבוניות... אנא המתן</span>';
+      box.className = 'status-running';
+      box.innerHTML = '🔍 שולח בקשת סריקה עבור חודש ' + m + '/' + y + ' לחשבון הגוגל שלך...<br>(עשוי לקחת 30-60 שניות)';
+
+      // Open in background / top window or fetch
+      window.open(activeScriptUrl, '_blank');
+      
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀</span> <span>סרוק שוב</span>';
+        box.className = 'status-success';
+        box.innerHTML = '✅ הבוט הופעל בלשונית נפרדת ומעבד את החשבוניות כעת ישירות בחשבונך!';
+      }, 2000);
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>

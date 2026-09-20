@@ -15,15 +15,18 @@ PROMPT_MEETING_SUMMARY = """
 האזן היטב לקובץ השמע המצורף של הפגישה/השיחה, והפק סיכום מקיף, תכליתי ומסודר היטב בעברית טבעית ורהוטה.
 
 חשוב מאוד:
-1. הקפד על חלוקה מרווחת וקריאה, שבה כל נושא, החלטה ותובנה מופיעים בשורה נפרדת (ולא כגוש טקסט רציף).
-2. סווג את הפגישה במדויק בשדה הקטגוריה: 'עסקים' או 'גפ"ן'.
+1. הקפד על חלוקה מרווחת וקריאה. בכל נקודה חדשה (מצוינת בכוכבית), חובה להתחיל שורה חדשה לחלוטין.
+2. קצר ותמצת את נקודות המפתח. אל תאריך במילים היכן שאין צורך.
+3. סווג את הפגישה במדויק בשדה הקטגוריה. בחר אך ורק מתוך הקטגוריות הבאות: {CATEGORIES_LIST}.
+"""
 
+DEFAULT_STRUCTURE = """
 אנא בנה את הסיכום לפי המבנה המדויק הבא:
 
 # סיכום פגישה: [נושא הפגישה המרכזי]
 
 **תאריך ושעה:** [תאריך ושעת הפגישה]
-**קטגוריה:** [עסקים / גפ"ן]
+**קטגוריה:** [{CATEGORIES_PLACEHOLDER}]
 **משתתפים/דוברים שזוהו:** [שמות הדוברים או תפקידים שזוהו במהלך השיחה]
 **נושא מרכזי:** [משפט אחד שמסביר את מהות הפגישה]
 
@@ -33,29 +36,35 @@ PROMPT_MEETING_SUMMARY = """
 [2-3 פסקאות קצרות וממוקדות שמסבירות את הרקע, הצורך והכיוונים המרכזיים].
 
 ## 2. נקודות מפתח ונושאים שנדונו
-(הקפד לרשום כל נושא כנקודה נפרדת בשורה משלו עם כותרת מודגשת):
-* **[נושא 1]:** [פירוט תמציתי של מה שנדון, עמדות הצדדים ומשמעויות]
-* **[נושא 2]:** [פירוט תמציתי של מה שנדון, עמדות הצדדים ומשמעויות]
-* **[נושא 3]:** [פירוט תמציתי של מה שנדון, עמדות הצדדים ומשמעויות]
+(קצר ותמצת! הקפד להתחיל שורה חדשה לכל נקודה עם כוכבית):
+
+* **[נושא 1]:** [משפט תמציתי קצרצר על מה שנדון]
+* **[נושא 2]:** [משפט תמציתי קצרצר על מה שנדון]
+* **[נושא 3]:** [משפט תמציתי קצרצר על מה שנדון]
 
 ## 3. החלטות שהתקבלו
-(רשימה ממוספרת שבה כל החלטה מופיעה בשורה נפרדת לחלוטין ללא טקסט רציף):
-1. **[החלטה ראשונה]:** [פירוט קצר של מה שהוחלט וסוכם]
-2. **[החלטה שנייה]:** [פירוט קצר של מה שהוחלט וסוכם]
-3. **[החלטה שלישית]:** [פירוט קצר של מה שהוחלט וסוכם]
+(רשימה ממוספרת שבה כל החלטה מופיעה בשורה נפרדת לחלוטין):
+1. **[החלטה ראשונה]:** [פירוט קצר של מה שהוחלט]
+2. **[החלטה שנייה]:** [פירוט קצר של מה שהוחלט]
 
 ## 4. משימות לביצוע ותוכנית פעולה (Action Items)
-- [ ] **משימה 1:** [תיאור המשימה] | **אחראי:** [שם/תפקיד] | **יעד:** [אם מוזכר]
-- [ ] **משימה 2:** [תיאור המשימה] | **אחראי:** [שם/תפקיד] | **יעד:** [אם מוזכר]
+(הצג בטבלה פשוטה):
+
+| משימה | באחריות | יעד / הערות |
+| :--- | :---: | :---: |
+| [תיאור משימה קצר] | [שם האחראי] | [יעד או הערה] |
+| [תיאור משימה קצר] | [שם האחראי] | [יעד או הערה] |
 
 ## 5. תובנות ודגשים להמשך
 (הקפד שכל תובנה תהיה בנקודה נפרדת בשורה משלה):
+
 * **[תובנה 1]:** [דגש, הזדמנות או נושא למעקב]
 * **[תובנה 2]:** [דגש, הזדמנות או נושא למעקב]
 
 ---
-*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך שמירה על הקשר מדויק וריווח מלא בין פסקאות.*
+*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך הקפדה חמורה על ירידת שורה בכל פעם שמתחילים נקודה חדשה.*
 """
+
 
 def get_mime_type(file_path):
     ext = os.path.splitext(file_path)[1].lower()
@@ -82,294 +91,62 @@ def get_mime_type(file_path):
     return mime_types.get(ext, mimetypes.guess_type(file_path)[0] or 'audio/mp4')
 
 def generate_html_summary(md_content, title, source_filename):
-    import re
+    import markdown
     
-    html_body = md_content
-    # Escape HTML tags in content safely
-    html_body = html_body.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    # Render markdown to HTML with tables extension
+    html_body = markdown.markdown(md_content, extensions=['tables'])
+    html_body = html_body.replace('<table>', '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; border: 1px solid #d1d5db;">')
     
-    # Headers
-    html_body = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_body, flags=re.MULTILINE)
-    
-    # Bold / Italic
-    html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
-    html_body = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html_body)
-    
-    # Checkboxes / Task lists
-    html_body = re.sub(r'^- \[ \] (.+)$', r'<li class="task-item"><input type="checkbox" disabled> \1</li>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^- \[x\] (.+)$', r'<li class="task-item"><input type="checkbox" checked disabled> \1</li>', html_body, flags=re.MULTILINE)
-    
-    # Bullets
-    html_body = re.sub(r'^- (.+)$', r'<li>\1</li>', html_body, flags=re.MULTILINE)
-    
-    # Horizontal rules
-    html_body = re.sub(r'^---$', r'<hr>', html_body, flags=re.MULTILINE)
-    
-    # Paragraphs (lines separated by double newlines)
-    paragraphs = html_body.split('\n\n')
-    formatted_p = []
-    for p in paragraphs:
-        p = p.strip()
-        if not p:
-            continue
-        if p.startswith('<h') or p.startswith('<li') or p.startswith('<hr'):
-            formatted_p.append(p)
-        else:
-            p_clean = p.replace('\n', '<br>')
-            formatted_p.append(f'<p>{p_clean}</p>')
-            
-    content_html = '\n'.join(formatted_p)
-
-    template = f"""<!DOCTYPE html>
+    # Wrap in clean, print-friendly, email-friendly HTML
+    template = f'''<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root {{
-            --bg: #0F172A;
-            --card-bg: #1E293B;
-            --text-main: #F8FAFC;
-            --text-muted: #94A3B8;
-            --accent: #38BDF8;
-            --accent-gold: #F59E0B;
-            --border: #334155;
-            --success: #10B981;
-        }}
-        * {{
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }}
         body {{
-            font-family: 'Heebo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
+            font-family: Arial, sans-serif;
+            background-color: #ffffff;
+            color: #000000;
             direction: rtl;
             text-align: right;
-            line-height: 1.8;
-            padding: 40px 20px;
+            line-height: 1.6;
+            padding: 20px;
         }}
         .container {{
-            max-width: 860px;
+            max-width: 800px;
             margin: 0 auto;
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }}
-        .header-badge {{
-            display: inline-block;
-            background: rgba(56, 189, 248, 0.15);
-            color: var(--accent);
-            padding: 6px 16px;
-            border-radius: 999px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            border: 1px solid rgba(56, 189, 248, 0.3);
+        h1, h2, h3 {{ color: #111827; margin-top: 20px; }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
         }}
-        h1 {{
-            font-size: 2.2rem;
-            font-weight: 900;
-            color: #FFFFFF;
-            margin-bottom: 24px;
-            line-height: 1.3;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 16px;
+        th, td {{
+            border: 1px solid #d1d5db;
+            padding: 12px;
+            text-align: right;
         }}
-        h2 {{
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: var(--accent-gold);
-            margin-top: 36px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        th {{
+            background-color: #f3f4f6;
+            font-weight: bold;
+            color: #374151;
         }}
-        h3 {{
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--accent);
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }}
-        p {{
-            margin-bottom: 16px;
-            color: #E2E8F0;
-            font-size: 1.05rem;
-        }}
-        ul, ol {{
-            margin-right: 24px;
-            margin-bottom: 20px;
-        }}
-        li {{
-            margin-bottom: 10px;
-            font-size: 1.05rem;
-            color: #E2E8F0;
-        }}
-        .task-item {{
-            list-style: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(15, 23, 42, 0.6);
-            padding: 12px 16px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            margin-bottom: 8px;
-        }}
-        .task-item input[type="checkbox"] {{
-            width: 18px;
-            height: 18px;
-            accent-color: var(--success);
-        }}
-        hr {{
-            border: 0;
-            height: 1px;
-            background: var(--border);
-            margin: 30px 0;
-        }}
-        .meta-box {{
-            background: rgba(15, 23, 42, 0.4);
-            border-radius: 12px;
-            padding: 18px;
-            margin-bottom: 28px;
-            border: 1px solid var(--border);
-            font-size: 0.95rem;
-            color: var(--text-muted);
-        }}
-        .meta-box strong {{
-            color: var(--text-main);
-        }}
-        .actions {{
-            display: flex;
-            gap: 12px;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }}
-        .btn {{
-            background: var(--accent);
-            color: #0F172A;
-            border: none;
-            padding: 10px 22px;
-            border-radius: 10px;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            font-family: inherit;
-            transition: all 0.2s;
-        }}
-        .btn:hover {{
-            background: #7dd3fc;
-            transform: translateY(-2px);
-        }}
-        @media print {{
-            body {{
-                background: white;
-                color: black;
-                padding: 0;
-            }}
-            .container {{
-                box-shadow: none;
-                border: none;
-                padding: 0;
-                color: black;
-                background: white;
-            }}
-            h1, h2, h3, p, li {{
-                color: black !important;
-            }}
-            .actions {{
-                display: none;
-            }}
-        }}
+        tr:nth-child(even) {{ background-color: #f9fafb; }}
+        hr {{ border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0; }}
+        a {{ color: #2563eb; text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header-badge">✦ סיכום פגישה חכם מבוסס AI</div>
-        <div class="meta-box">
-            <div>קובץ מקור: <strong>{source_filename}</strong></div>
-            <div>הופק בתאריך: <strong>{datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}</strong></div>
-        </div>
-        {content_html}
-        <div class="actions">
-            <button class="btn" onclick="window.print()">הדפס / שמור כ-PDF</button>
-        </div>
+        {html_body}
     </div>
 </body>
-</html>
-"""
+</html>'''
     return template
-
-class SummaryResult(str):
-    category: str
-    meeting_title: str
-    date_str: str
-    md_path: str
-    html_path: str
-    summary_text: str
-
-def extract_recording_date(file_name, file_path=None):
-    """
-    Extracts date and time from filename or file metadata.
-    Supports WhatsApp format: 'WhatsApp Audio 2026-08-31 at 09.46.56'
-    Supports: '250826', '24.08.2026', '3.8.26', '2026-09-03', etc.
-    """
-    import re
-    # 1. WhatsApp format: 'WhatsApp Audio YYYY-MM-DD at HH.MM.SS'
-    m_wa = re.search(r'WhatsApp Audio (\d{4})-(\d{2})-(\d{2}) at (\d{2})\.(\d{2})', file_name, re.IGNORECASE)
-    if m_wa:
-        yyyy, mm, dd, hh, mins = m_wa.groups()
-        return f"{int(dd):02d}/{int(mm):02d}/{yyyy} {hh}:{mins}"
-        
-    m_ptt = re.search(r'PTT-(\d{4})(\d{2})(\d{2})-WA', file_name, re.IGNORECASE)
-    if m_ptt:
-        yyyy, mm, dd = m_ptt.groups()
-        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
-
-    # 2. Date with dots or dashes: YYYY-MM-DD or YYYY.MM.DD
-    m_ymd = re.search(r'(\d{4})[-_\.](\d{1,2})[-_\.](\d{1,2})', file_name)
-    if m_ymd:
-        yyyy, mm, dd = m_ymd.groups()
-        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
-
-    # 3. Date with dots or dashes: DD.MM.YYYY or DD-MM-YYYY
-    m_dmy = re.search(r'(\d{1,2})[-_\.](\d{1,2})[-_\.](\d{4})', file_name)
-    if m_dmy:
-        dd, mm, yyyy = m_dmy.groups()
-        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
-        
-    # 4. 2-digit year: DD.MM.YY (e.g. 24.08.26, 3.8.26)
-    m_dmy2 = re.search(r'(\d{1,2})[-_\.](\d{1,2})[-_\.](\d{2})\b', file_name)
-    if m_dmy2:
-        dd, mm, yy = m_dmy2.groups()
-        yyyy = f"20{yy}"
-        return f"{int(dd):02d}/{int(mm):02d}/{yyyy}"
-
-    # 5. Compact 6 digits YYMMDD or DDMMYY (e.g. 250826 -> 25/08/2026)
-    m_compact = re.search(r'\b(\d{2})(\d{2})(\d{2})\b', file_name)
-    if m_compact:
-        p1, p2, p3 = m_compact.groups()
-        if int(p1) <= 31 and 1 <= int(p2) <= 12:
-            return f"{p1}/{p2}/20{p3}"
-        elif int(p3) <= 31 and 1 <= int(p2) <= 12:
-            return f"{p3}/{p2}/20{p1}"
-
-    # 6. Fallback to file creation / modified time
-    if file_path and os.path.exists(file_path):
-        mtime = os.path.getmtime(file_path)
-        return datetime.datetime.fromtimestamp(mtime).strftime('%d/%m/%Y')
-
-    return datetime.datetime.now().strftime('%d/%m/%Y')
 
 def extract_category(summary_text):
     """Detects whether meeting category is 'עסקים' or 'גפ\"ן'."""
@@ -493,9 +270,36 @@ def append_to_master_summary(summary_text, category, meeting_title, date_str):
     print(f"   ✓ קובץ הריכוז עודכן בהצלחה: {os.path.basename(target_file)} (נוספה פגישה #{next_idx})")
     return target_file
 
-def summarize_audio_file(audio_path, display_name=None):
+
+def extract_recording_date(file_name, audio_path):
+    import datetime
+    import re
+    # Try to extract date from filename, else return current date
+    match = re.search(r'\d{4}-\d{2}-\d{2}', file_name)
+    if match:
+        return match.group(0)
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+
+def summarize_audio_file(audio_path, display_name=None, categories=None, manual_category=None):
     import warnings
     warnings.filterwarnings("ignore")
+    
+    if categories is None:
+        categories = [{"name": "כללי", "prompt": ""}]
+        
+    # Support both list of strings (legacy) and list of dicts (new)
+    cat_names = []
+    cat_dict = {}
+    for c in categories:
+        if isinstance(c, str):
+            cat_names.append(c)
+            cat_dict[c] = ""
+        else:
+            cat_names.append(c.get("name", ""))
+            cat_dict[c.get("name", "")] = c.get("prompt", "")
+            
+    categories_list = ", ".join([f"'{c}'" for c in cat_names if c])
+    categories_placeholder = " / ".join([c for c in cat_names if c])
     
     if not os.path.exists(audio_path):
         print(f"שגיאה: הקובץ לא נמצא: {audio_path}")
@@ -512,65 +316,118 @@ def summarize_audio_file(audio_path, display_name=None):
     print(f"תאריך שחולץ: {extracted_date}")
     print(f"גודל קובץ: {file_size_mb:.2f} MB")
     print(f"סוג מדיה: {mime_type}")
+    if manual_category:
+        print(f"סיווג ידני: {manual_category} (מדלג על סיווג אוטומטי)")
     print("=" * 60)
     
     os.makedirs(SUMMARIES_DIR, exist_ok=True)
     
+    # Check if transcription is requested
+    should_transcribe = False
+    if manual_category:
+        for c in categories:
+            if isinstance(c, dict) and c.get("name") == manual_category:
+                should_transcribe = c.get("transcribe", False)
+                break
+    else:
+        # Default to the first category (General) if dropped in root
+        if categories and isinstance(categories[0], dict):
+            should_transcribe = categories[0].get("transcribe", False)
+            
+    transcript_md = None
+    transcript_data = None
+    
+    if should_transcribe:
+        import transcriber
+        transcript_md, transcript_data = transcriber.transcribe_and_diarize(audio_path)
+    else:
+        print("\n1. תמלול מלא כבוי עבור תיקייה זו (מדלג על Deepgram)...")
+        
     # Initialize Gemini client
     client = genai.Client(api_key=config.GEMINI_API_KEY)
     
     uploaded_file = None
-    if file_size_mb < 20:
-        print("\n1. קורא את קובץ השמע לעיבוד ישיר ומהיר ב-Gemini...")
-        with open(audio_path, "rb") as f:
-            audio_data = f.read()
-        audio_content = types.Part.from_bytes(data=audio_data, mime_type=mime_type)
-        print("   ✓ הקובץ נטען ומועבר ישירות למודל (ללא צורך בהמתנה להמרה בענן)")
+    if transcript_md:
+        print("\n1. משתמש בטקסט שתומלל מ-Deepgram כקלט ל-Gemini...")
+        audio_content = types.Part.from_text(text=f"להלן תמלול מלא של הפגישה:\n\n{transcript_md}")
     else:
-        print("\n1. מעלה את קובץ השמע לעיבוד ב-Gemini (קובץ גדול)...")
-        start_upload = time.time()
-        
-        # Ensure ASCII path for httpx upload header compatibility
-        ext = os.path.splitext(audio_path)[1]
-        upload_path = audio_path
-        cleanup_temp = False
-        if not audio_path.isascii():
-            import shutil
-            import tempfile
-            safe_temp = os.path.join(tempfile.gettempdir(), f"audio_up_{int(time.time())}_{os.getpid()}{ext}")
-            shutil.copy2(audio_path, safe_temp)
-            upload_path = safe_temp
-            cleanup_temp = True
+        if file_size_mb < 20:
+            print("\n1. קורא את קובץ השמע לעיבוד ישיר ומהיר ב-Gemini...")
+            with open(audio_path, "rb") as f:
+                audio_data = f.read()
+            audio_content = types.Part.from_bytes(data=audio_data, mime_type=mime_type)
+            print("   ✓ הקובץ נטען ומועבר ישירות למודל (ללא צורך בהמתנה להמרה בענן)")
+        else:
+            print("\n1. מעלה את קובץ השמע לעיבוד ב-Gemini (קובץ גדול)...")
+            start_upload = time.time()
             
-        try:
-            uploaded_file = client.files.upload(
-                file=upload_path,
-                config=types.UploadFileConfig(mime_type=mime_type, display_name="meeting_audio") if mime_type else None
-            )
-        finally:
-            if cleanup_temp and os.path.exists(upload_path):
-                try:
-                    os.remove(upload_path)
-                except Exception:
-                    pass
-                    
-        print(f"   ✓ הקובץ הועלה בהצלחה (משך העלאה: {time.time() - start_upload:.1f} שניות)")
-        
-        while uploaded_file.state.name == "PROCESSING":
-            print("   ממתין לסיום עיבוד הקובץ בשרתי Google...")
-            time.sleep(3)
-            uploaded_file = client.files.get(name=uploaded_file.name)
+            # Ensure ASCII path for httpx upload header compatibility
+            ext = os.path.splitext(audio_path)[1]
+            upload_path = audio_path
+            cleanup_temp = False
+            if not audio_path.isascii():
+                import shutil
+                import tempfile
+                safe_temp = os.path.join(tempfile.gettempdir(), f"audio_up_{int(time.time())}_{os.getpid()}{ext}")
+                shutil.copy2(audio_path, safe_temp)
+                upload_path = safe_temp
+                cleanup_temp = True
+                
+            try:
+                uploaded_file = client.files.upload(
+                    file=upload_path,
+                    config=types.UploadFileConfig(mime_type=mime_type, display_name="meeting_audio") if mime_type else None
+                )
+            finally:
+                if cleanup_temp and os.path.exists(upload_path):
+                    try:
+                        os.remove(upload_path)
+                    except Exception:
+                        pass
+                        
+            print(f"   ✓ הקובץ הועלה בהצלחה (משך העלאה: {time.time() - start_upload:.1f} שניות)")
             
-        if uploaded_file.state.name == "FAILED":
-            raise Exception(f"עיבוד הקובץ נכשל: {uploaded_file.error.message}")
-            
-        audio_content = uploaded_file
+            while uploaded_file.state.name == "PROCESSING":
+                print("   ממתין לסיום עיבוד הקובץ בשרתי Google...")
+                time.sleep(3)
+                uploaded_file = client.files.get(name=uploaded_file.name)
+                
+            if uploaded_file.state.name == "FAILED":
+                raise Exception(f"עיבוד הקובץ נכשל: {uploaded_file.error.message}")
+                
+            audio_content = uploaded_file
         
     print("\n2. מתמלל ומנתח את הפגישה ומפיק סיכום מובנה בעברית...")
     start_gen = time.time()
     
-    dynamic_prompt = PROMPT_MEETING_SUMMARY + f"\n\nהקשר נוסף שנמצא:\n- שם הקובץ: {file_name}\n- תאריך ושעה שחולצו מקובץ ההקלטה: {extracted_date} (השתמש בתאריך זה בשדה התאריך אלא אם צוין תאריך אחר מפורשות בשיחה)."
+    # Format the prompt
+    base_prompt = PROMPT_MEETING_SUMMARY.replace("{CATEGORIES_LIST}", categories_list)
     
+    dynamic_prompt = base_prompt + f"\n\nהקשר נוסף שנמצא:\n- שם הקובץ: {file_name}\n- תאריך ושעה שחולצו מקובץ ההקלטה: {extracted_date} (השתמש בתאריך זה בשדה התאריך אלא אם צוין תאריך אחר מפורשות בשיחה)."
+    
+    # Apply custom prompt if available
+    target_cat = manual_category if manual_category else None
+    if target_cat:
+        if target_cat in cat_dict and cat_dict[target_cat]:
+            custom_instructions = cat_dict[target_cat]
+            print(f"   ✓ מפעיל תבנית סיכום מותאמת אישית עבור התיקייה: {target_cat}")
+            dynamic_prompt += f"\n\nהנחיות עיצוב ומבנה מיוחדות למשתמש זה (חובה לציית! התעלם מכל מבנה אחר):\n{custom_instructions}"
+        else:
+            print(f"   ✓ מפעיל תבנית ברירת מחדל עבור התיקייה: {target_cat}")
+            dynamic_prompt += f"\n\n{DEFAULT_STRUCTURE.replace('{CATEGORIES_PLACEHOLDER}', target_cat)}"
+    else:
+        # Auto category: provide default structure but override per category if needed
+        has_custom = False
+        custom_prompts_text = "\n\nהנחיות עיצוב ומבנה מיוחדות (חובה לציית להנחיה של הקטגוריה שבחרת - היא דורסת את מבנה ברירת המחדל!):\n"
+        for cname, cprompt in cat_dict.items():
+            if cprompt:
+                has_custom = True
+                custom_prompts_text += f"אם בחרת לסווג כ-'{cname}', עליך לעצב את הסיכום בדיוק לפי המבנה וההנחיות הבאות: {cprompt}\n"
+        
+        dynamic_prompt += f"\n\n{DEFAULT_STRUCTURE.replace('{CATEGORIES_PLACEHOLDER}', categories_placeholder)}"
+        if has_custom:
+            dynamic_prompt += custom_prompts_text
+            
     response = client.models.generate_content(
         model=config.GEMINI_MODEL,
         contents=[
@@ -590,7 +447,12 @@ def summarize_audio_file(audio_path, display_name=None):
             pass
         
     # Analyze metadata
-    category = extract_category(summary_text)
+    category = manual_category if manual_category else extract_category(summary_text)
+    
+    # If AI hallucinated a category, fallback to the first one
+    if category not in cat_names and not manual_category:
+        category = cat_names[0] if cat_names else "כללי"
+        
     meeting_title = extract_meeting_title(summary_text, file_name)
     meeting_date = extract_meeting_date_from_summary(summary_text) or extracted_date
     
@@ -604,11 +466,27 @@ def summarize_audio_file(audio_path, display_name=None):
     html_file_path = os.path.join(SUMMARIES_DIR, f"{base_output_name}.html")
     
     with open(md_file_path, "w", encoding="utf-8") as f:
-        f.write(summary_text)
+        f.write('<div dir="rtl">\n\n' + summary_text + '\n\n</div>')
+
         
     html_content = generate_html_summary(summary_text, f"סיכום פגישה - {file_name}", file_name)
     with open(html_file_path, "w", encoding="utf-8") as f:
         f.write(html_content)
+        
+    transcript_md_path = None
+    transcript_html_path = None
+    if transcript_md:
+        base_transcript_name = f"תמלול_מלא_{now_str}_{os.path.splitext(file_name)[0]}"
+        transcript_md_path = os.path.join(SUMMARIES_DIR, f"{base_transcript_name}.md")
+        transcript_html_path = os.path.join(SUMMARIES_DIR, f"{base_transcript_name}.html")
+        
+        with open(transcript_md_path, "w", encoding="utf-8") as f:
+            f.write(transcript_md)
+            
+        transcript_html = transcriber.get_html_transcript(transcript_md, f"תמלול מלא - {file_name}")
+        with open(transcript_html_path, "w", encoding="utf-8") as f:
+            f.write(transcript_html)
+        print(f"• קובץ תמלול מלא נוצר בהצלחה.")
         
     print("\n" + "=" * 60)
     print(f"הסיכום נשמר בהצלחה בתיקיית הסיכומים:")
@@ -629,12 +507,16 @@ def summarize_audio_file(audio_path, display_name=None):
         print(f"לא ניתן היה לפתוח את הדפדפן אוטומטית: {e}")
         
     # Build enriched return object compatible with string
+    class SummaryResult(str):
+        pass
     res = SummaryResult(html_file_path)
     res.category = category
     res.meeting_title = meeting_title
     res.date_str = meeting_date
     res.md_path = md_file_path
     res.html_path = html_file_path
+    res.transcript_md_path = transcript_md_path
+    res.transcript_html_path = transcript_html_path
     res.summary_text = summary_text
     return res
 

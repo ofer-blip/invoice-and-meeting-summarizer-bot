@@ -100,7 +100,7 @@
 
 <div class="container">
     <h1>מדריך התקנה טכני - בוט החשבוניות D-Dialog</h1>
-    <p><strong>מיועד עבור:</strong> עופר (Ofer) לצורך ביצוע התקנה והטמעה מלאה במחשב של שחף מיכאל.</p>
+    <p><strong>מיועד עבור:</strong> עופר (Ofer) לצורך ביצוע התקנה והטמעה מלאה במחשב של הלקוח.</p>
 
     <h2>דרישות קדם והתקנת סביבה</h2>
     <div class="list-item">
@@ -115,11 +115,11 @@
         החבילות העיקריות המותקנות: <code>google-api-python-client</code>, <code>google-auth-oauthlib</code>, <code>google-genai</code>, <code>reportlab</code>, <code>pydantic</code>.
     </div>
 
-    <h2>הגדרת פרויקט Google Cloud (עבור שחף)</h2>
+    <h2>הגדרת פרויקט Google Cloud (עבור הלקוח)</h2>
     <p>יש ליצור פרויקט גישה ייעודי כדי לקבל את קובץ הרישיון המקורי:</p>
     <ol>
-        <li>היכנס ל- <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> באמצעות חשבון הגוגל של שחף.</li>
-        <li>צור פרויקט חדש בשם <code>Shachaf-Invoice-Bot</code>.</li>
+        <li>היכנס ל- <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> באמצעות חשבון הגוגל של הלקוח.</li>
+        <li>צור פרויקט חדש בשם <code>Client-Invoice-Bot</code>.</li>
         <li>עבור ל-<strong>APIs & Services -> Library</strong> והפעל (Enable) את שלושת ה-APIs הבאים:
             <ul>
                 <li><strong>Gmail API</strong></li>
@@ -130,13 +130,13 @@
         <li>עבור ל-<strong>OAuth consent screen</strong>:
             <ul>
                 <li>בחר ב-<strong>External</strong> ולחץ על Create.</li>
-                <li>מלא את פרטי האפליקציה (שם, מייל תמיכה ומייל מפתח - כולם של שחף).</li>
+                <li>מלא את פרטי האפליקציה (שם, מייל תמיכה ומייל מפתח - כולם של הלקוח).</li>
                 <li>בשלב ה-<strong>Scopes</strong>, לחץ על Add Scopes והוסף ידנית את הגישות הבאות:
                     <br><code>https://www.googleapis.com/auth/gmail.readonly</code> (לקריאת מיילים)
                     <br><code>https://www.googleapis.com/auth/gmail.send</code> (לשליחת מייל הסיכום בסיום)
                     <br><code>https://www.googleapis.com/auth/drive</code> (ליצירה ועריכת קבצים ותיקיות בדרייב)
                 </li>
-                <li>בשלב ה-<strong>Test Users</strong>, לחץ על Add Users והוסף את <strong>כתובת הג'ימייל של שחף</strong> (המייל שייסרק).</li>
+                <li>בשלב ה-<strong>Test Users</strong>, לחץ על Add Users והוסף את <strong>כתובת הג'ימייל של הלקוח</strong> (המייל שייסרק).</li>
             </ul>
         </li>
         <li>עבור ללשונית <strong>Credentials</strong>:
@@ -151,12 +151,12 @@
 
     <h2>הגדרת Gemini AI והגדרות פנימיות</h2>
     <ol>
-        <li>היכנס ל- <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> בחשבון של שחף.</li>
+        <li>היכנס ל- <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> בחשבון של הלקוח.</li>
         <li>לחץ על <strong>Get API key</strong> וצור מפתח API חדש.</li>
         <li>פתח את הקובץ <code>config.py</code> בתיקיית הבוט והזן את הערכים הבאים:
             <ul>
-                <li><code>GEMINI_API_KEY = 'הכנס_את_המפתח_של_שחף_כאן'</code></li>
-                <li><code>NOTIFICATION_EMAIL_RECIPIENT = 'מייל_היעד_של_שחף_לקבלת_דוחות'</code> (אם יישאר ריק, הבוט ישלח אוטומטית למייל המחובר של שחף עצמו).</li>
+                <li><code>GEMINI_API_KEY = 'הכנס_את_המפתח_של_הלקוח_כאן'</code></li>
+                <li><code>NOTIFICATION_EMAIL_RECIPIENT = 'מייל_היעד_של_הלקוח_לקבלת_דוחות'</code> (אם יישאר ריק, הבוט ישלח אוטומטית למייל המחובר של הלקוח עצמו).</li>
                 <li><code>PARENT_FOLDER_ID = ''</code> (אם ברצונך שכל תיקיות החשבוניות והאקסלים החודשיים ייווצרו בתוך תיקיית-על ספציפית בדרייב שלו, צור תיקייה בדרייב שלו, העתק את ה-ID שלה מכתובת ה-URL והדבק אותו כאן. אם יישאר ריק, התיקיות ייווצרו בתיקיית השורש של הדרייב).</li>
             </ul>
         </li>
@@ -168,23 +168,23 @@
     </div>
     <ol>
         <li>הרצ את הקובץ <code>Run_Bot.bat</code> (או הרצ ב-CMD: <code>python main.py</code>).</li>
-        <li>ייפתח דפדפן במחשב שיבקש להתחבר לחשבון הגוגל של שחף.</li>
+        <li>ייפתח דפדפן במחשב שיבקש להתחבר לחשבון הגוגל של הלקוח.</li>
         <li>מכיוון שהאפליקציה בשלבי פיתוח (Testing), גוגל יציג אזהרה שהאפליקציה אינה מאומתת. יש ללחוץ על <strong>Advanced</strong> (מתקדם) ואז על <strong>Go to App (unsafe)</strong>.</li>
         <li>אשר את הרשאות הגישה.</li>
-        <li>בסיום, הבוט יפעל ובתיקיית הבוט ייווצר קובץ קריטי בשם <code>token.json</code>. קובץ זה מכיל את הרישיון המקומי של שחף ומאפשר לבוט לרוץ מאותו רגע באופן עצמאי לחלוטין ללא שום צורך באישור דפדפן נוסף.</li>
+        <li>בסיום, הבוט יפעל ובתיקיית הבוט ייווצר קובץ קריטי בשם <code>token.json</code>. קובץ זה מכיל את הרישיון המקומי של הלקוח ומאפשר לבוט לרוץ מאותו רגע באופן עצמאי לחלוטין ללא שום צורך באישור דפדפן נוסף.</li>
     </ol>
 
     <h2>הגדרת ריצה אוטומטית (Task Scheduler - מתזמן המשימות)</h2>
-    <p>כדי שהבוט יפעל לבד ברקע בכל 1 לחודש וישלח לשחף דוח אוטומטי של החשבוניות של החודש החולף:</p>
+    <p>כדי שהבוט יפעל לבד ברקע בכל 1 לחודש וישלח ללקוח דוח אוטומטי של החשבוניות של החודש החולף:</p>
     <ol>
-        <li>פתח את <strong>Task Scheduler</strong> בווינדוס של שחף.</li>
+        <li>פתח את <strong>Task Scheduler</strong> בווינדוס של הלקוח.</li>
         <li>לחץ על <strong>Create Basic Task</strong>.</li>
         <li>תן שם למשימה (לדוגמה: <code>D-Dialog Invoice Bot</code>) ולחץ על Next.</li>
         <li>בחר ב-Trigger: <strong>Monthly</strong>.</li>
         <li>הגדר את המשימה לפעול ביום ה-<strong>1</strong> בכל חודש, בשעה מוקדמת (לדוגמה: 08:00 בבוקר).</li>
         <li>ב-Action, בחר ב-<strong>Start a program</strong>.</li>
         <li>ב-Program/script לחץ על Browse ובחר בקובץ <code>Run_Bot.bat</code> בתיקיית הבוט.</li>
-        <li><span style="color: #d97706; font-weight: bold;">שלב קריטי:</span> בשדה <strong>Start in (optional)</strong>, העתק והדבק את הנתיב המלא של תיקיית הבוט (לדוגמה: <code>C:\Users\Shachaf\Desktop\shachaf_m</code>). 
+        <li><span style="color: #d97706; font-weight: bold;">שלב קריטי:</span> בשדה <strong>Start in (optional)</strong>, העתק והדבק את הנתיב המלא של תיקיית הבוט (לדוגמה: <code>C:\Users\Client\Desktop\business_automations</code>). 
         <br><em>אם לא תגדיר שדה זה, הבוט יקרוס בריצה הרקעית כי הוא לא ידע היכן למצוא את קובץ credentials.json והספריות.</em></li>
         <li>לחץ על Finish. המערכת מוגדרת ואוטומטית לחלוטין!</li>
     </ol>

@@ -1,46 +1,12 @@
 /**
- * =========================================================================
- * אפליקציית ענן ווב: ניהול, סיווג וריכוז חשבוניות אוטומטי ב-Google Drive & Sheets
- * D-Dialog Invoice & Receipt Manager — Google Apps Script (Web App & API)
- * =========================================================================
- */
-
-// הגדרות מערכת ומפתחות
-var GEMINI_API_KEY = "";
-var GEMINI_MODEL = "gemini-2.5-flash";
-
-// פרטי מיתוג ויוצר (D-Dialog)
-var BRAND_NAME = "D-Dialog";
-var BRAND_TAGLINE = "אוטומציה וסוכני AI מתקדמים לעסקים";
-var BRAND_WEBSITE = "https://ddialog.co.il";
-var BRAND_PHONE = "052-6947202";
-var BOT_VERSION = "v1.2"; // יומן שינויים: עדכון חילוץ מספרים נקי מג'מיני
-
-// שאילתת חיפוש ממוקדת: מסמכים פיננסיים מדויקים (הסרנו 'zoom' ו-'morning' כדי למנוע שאיבת סיכומי פגישות וניוזלטרים)
-var GMAIL_SEARCH_QUERY_BASE =
-  '((has:attachment filename:pdf (חשבונית OR קבלה OR invoice OR receipt OR "דרישת תשלום" OR "אישור תשלום" OR "פירוט חיוב" OR billing)) OR from:printernet.co.il OR "כביש 6" OR from:payments-noreply@google.com OR from:calmail OR from:payme.io) -from:no-reply@accounts.google.com';
-
-// שם העסק או בעל העסק (משמש את ה-AI להבנת כיוון ההוצאה/הכנסה ומי הספק/לקוח)
-// יש לשנות ערך זה בכל התקנה ללקוח חדש (למשל: "שחף / שחף דיגיטל")
-var BUSINESS_OWNER_NAME = "עופר קאופמן / D-Dialog";
-
-// כתובת מייל לקבלת הדוח החודשי (השאר ריק כדי לשלוח למייל שלך)
-var NOTIFICATION_EMAIL = "saritofer.k@gmail.com";
-
-// שם או מזהה (ID) תיקיית האב הראשית ב-Google Drive
-var MAIN_PARENT_FOLDER_NAME = "חשבוניות";
-var MAIN_PARENT_FOLDER_ID = "1Icgi5DC2nh5LjUo6Z4VRKubokfe56LbA"; // השאר ריק כדי לחפש אוטומטית לפי שם
-
-// אייקון האפליקציה ב-Base64
-var APP_ICON_BASE64 =
-  "data:image/jpeg;base64,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";
-
-/**
  * נקודת כניסה: תומכת גם בממשק Web App וגם ב-API קריאות Fetch/JSON
  */
 function doGet(e) {
   // 1. API endpoint עבור אפליקציית ה-PWA
   if (e && e.parameter && e.parameter.api === "scan") {
+    if (e.parameter.pin !== ACCESS_PIN) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Access Denied: Invalid PIN" })).setMimeType(ContentService.MimeType.JSON);
+    }
     var y = parseInt(e.parameter.year) || new Date().getFullYear();
     var m = parseInt(e.parameter.month) || new Date().getMonth() + 1;
     try {
@@ -52,6 +18,19 @@ function doGet(e) {
       return ContentService.createTextOutput(
         JSON.stringify({ success: false, error: err.toString() }),
       ).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  if (e && e.parameter && e.parameter.api === "zip") {
+    if (e.parameter.pin !== ACCESS_PIN) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Access Denied: Invalid PIN" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var y = parseInt(e.parameter.year) || new Date().getFullYear();
+    var m = parseInt(e.parameter.month) || new Date().getMonth() + 1;
+    try {
+      var url = createMonthlyZip(y, m);
+      return ContentService.createTextOutput(JSON.stringify(url)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
     }
   }
 
@@ -77,10 +56,10 @@ function doGet(e) {
     '  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">' +
     '  <meta name="theme-color" content="#0F172A">' +
     '  <link rel="icon" type="image/jpeg" href="' +
-    APP_ICON_BASE64 +
+    APP_ICON_URL +
     '">' +
     '  <link rel="apple-touch-icon" href="' +
-    APP_ICON_BASE64 +
+    APP_ICON_URL +
     '">' +
     "  <title>בוט חשבוניות - D-Dialog</title>" +
     "  <style>" +
@@ -124,7 +103,7 @@ function doGet(e) {
     '  <div class="card">' +
     '    <div class="logo-container">' +
     '      <img src="' +
-    APP_ICON_BASE64 +
+    APP_ICON_URL +
     '" alt="D-Dialog Invoice Bot" class="logo-img">' +
     "    </div>" +
     "    <h1>בוט חשבוניות וקבלות AI</h1>" +
@@ -456,12 +435,13 @@ function processInvoicesBatch(targetYear, targetMonth) {
               .replace(/ +/g, "_");
             if (!safeSupplier) safeSupplier = "ספק";
 
-            var rawAmount = classification.total_amount;
+            var rawAmount = classification.total_amount || classification.totalAmount || classification.amount || 0;
             var cleanAmount = String(rawAmount).replace(/[^0-9.-]/g, "");
             var amountVal = Number(cleanAmount) || 0;
             
-            var invNum = classification.invoice_number
-              ? String(classification.invoice_number).replace(/[^a-zA-Z0-9_-]/g, "")
+            var rawInv = classification.invoice_number || classification.invoiceNumber || "";
+            var invNum = rawInv
+              ? String(rawInv).replace(/[^a-zA-Z0-9_-]/g, "")
               : "0";
             var fileExt = isPdf ? ".pdf" : attName.substring(attName.lastIndexOf("."));
 
@@ -559,13 +539,14 @@ function processInvoicesBatch(targetYear, targetMonth) {
               .replace(/ +/g, "_");
             if (!safeSupplier) safeSupplier = "ספק";
 
-            var rawAmount = classification.total_amount;
+            var rawAmount = classification.total_amount || classification.totalAmount || classification.amount || 0;
             var cleanAmount = String(rawAmount).replace(/[^0-9.-]/g, "");
             var amountVal = Number(cleanAmount) || 0;
             
-            var invNum = classification.invoice_number
-              ? String(classification.invoice_number).replace(/[^a-zA-Z0-9_-]/g, "")
-              : "הודעה";
+            var rawInv = classification.invoice_number || classification.invoiceNumber || "";
+            var invNum = rawInv
+              ? String(rawInv).replace(/[^a-zA-Z0-9_-]/g, "")
+              : "ללא מספר";
 
             var formattedName =
               docDate + "_" + safeSupplier + "_" + amountVal + "_" + invNum + "_מייל.pdf";

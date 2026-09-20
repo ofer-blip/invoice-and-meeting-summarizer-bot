@@ -39,9 +39,47 @@
     .action-btn:disabled { background: #475569; color: #94A3B8; cursor: not-allowed; transform: none; box-shadow: none; }
     
     .direct-link-btn {
-      width: 100%; padding: 13px; font-size: 14px; font-weight: 600; color: #38BDF8;
-      background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+      width: 100%; padding: 10px; font-size: 13px; font-weight: 500; color: #94A3B8;
+      background: transparent; border: none;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: underline;
+      transition: all 0.2s; margin-top: -4px; margin-bottom: 15px;
+    }
+    .direct-link-btn:hover { background: rgba(255,255,255,0.05); border-radius: 8px; color: #F8FAFC; text-decoration: none; }
+    
+    .select-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: right;
+    }
+    .select-group label {
+      font-size: 13px;
+      color: #CBD5E1;
+      font-weight: 600;
+    }
+    #categorySelect {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #F8FAFC;
+      background: #334155;
+      border: 1px solid #475569;
+      border-radius: 12px;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: left 16px center;
+      background-size: 16px;
+    }
+    #categorySelect:focus {
+      border-color: #0EA5E9;
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
     }
     
     #status-box { margin-top: 20px; padding: 14px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; display: none; text-align: right; }
@@ -96,7 +134,7 @@
     </button>
     
     <a id="directLink" href="#" target="_blank" class="direct-link-btn">
-      <span>↗️</span> <span>פתיחה ישירה ב-Apps Script</span>
+      <span>↗️</span> <span>הגדרות מערכת (Dashboard)</span>
     </a>
     
     <div id="status-box"></div>
@@ -159,7 +197,13 @@
     function updateDirectLink() {
       const link = document.getElementById('directLink');
       if (activeScriptUrl && activeScriptUrl.startsWith('http')) {
-        link.href = activeScriptUrl;
+        // Remove /sync if it's there to go to the dashboard root
+        let dashUrl = activeScriptUrl.replace(/\/sync\/?$/, '');
+        if (dashUrl === activeScriptUrl && !dashUrl.includes('/exec')) {
+             // fallback if they didn't put /sync
+             dashUrl = dashUrl;
+        }
+        link.href = dashUrl;
         link.style.display = 'flex';
       } else {
         link.style.display = 'none';
