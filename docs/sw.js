@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meeting-bot-v2';
+const CACHE_NAME = 'meeting-bot-v3';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
