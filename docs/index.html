@@ -78,7 +78,9 @@
 <body>
 
   <div class="card">
-    <button class="gear-btn" onclick="openConfig()" title="הגדרות קישור ואבטחה">⚙️</button>
+      <button class="icon-btn" onclick="openConfig()" aria-label="הגדרות" style="display: none;">
+        ⚙️
+      </button>
     <img src="icon-192.png" alt="D-Dialog Meeting AI" class="logo-img">
     <h1>בוט סיכום פגישות AI</h1>
     <p class="desc">סנכרון הקלטות מ-Google Drive, תמלול חכם ב-Gemini והפקת סיכום מנהלים מובנה ישירות למייל.</p>
@@ -145,7 +147,7 @@
     const paramScript = urlParams.get('script') || urlParams.get('url');
     const paramPin = urlParams.get('pin');
 
-    let activeScriptUrl = paramScript || localStorage.getItem(STORAGE_KEY) || DEFAULT_URL;
+    let activeScriptUrl = 'https://businessautomations-889823725975.europe-west3.run.app/sync';
     let activePin = paramPin || localStorage.getItem(PIN_STORAGE_KEY) || '';
 
     // Auto-save from URL query params
