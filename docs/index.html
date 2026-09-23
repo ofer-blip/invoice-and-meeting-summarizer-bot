@@ -73,6 +73,39 @@
       position: absolute; top: 18px; left: 18px; background: none; border: none;
       font-size: 18px; color: #64748B; cursor: pointer; padding: 6px;
     }
+    .select-group {
+      margin-bottom: 24px;
+      text-align: right;
+    }
+    .select-group label {
+      display: block;
+      font-size: 14px;
+      color: #94A3B8;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .select-group select {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      color: #F8FAFC;
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: left 16px center;
+      background-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .select-group select:focus {
+      outline: none;
+      border-color: #38BDF8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -97,8 +130,8 @@
       <span>🎙️</span> <span>סכם פגישות עכשיו</span>
     </button>
     
-    <a id="directLink" href="#" target="_blank" class="direct-link-btn">
-      <span>↗️</span> <span>פתיחה ישירה ב-Apps Script</span>
+    <a href="/dashboard" class="direct-link-btn" style="margin-bottom: 12px; margin-top: 12px;">
+      <span>⚙️</span> <span>הגדרות וניהול תיקיות</span>
     </a>
     
     <div id="status-box"></div>
@@ -157,17 +190,6 @@
     if (paramPin) {
       localStorage.setItem(PIN_STORAGE_KEY, paramPin);
     }
-
-    function updateDirectLink() {
-      const link = document.getElementById('directLink');
-      if (activeScriptUrl && activeScriptUrl.startsWith('http')) {
-        link.href = activeScriptUrl;
-        link.style.display = 'flex';
-      } else {
-        link.style.display = 'none';
-      }
-    }
-    updateDirectLink();
 
     // JSONP loader helper to bypass CORS across all browsers
     function fetchJsonp(url) {
@@ -287,8 +309,16 @@
         btn.innerHTML = '<span>🎙️</span> <span>סכם פגישות שוב</span>';
 
         if (result && result.success) {
-          box.className = 'status-success';
-          box.innerHTML = '✅ <strong>הסיכום הושלם בהצלחה!</strong><br>' + (result.message || 'מסמך הסיכום נשמר ב-Google Drive ונשלח ישירות למייל.');
+          if (result.message && result.message.indexOf('לא נמצאו') !== -1) {
+            box.className = 'status-running'; 
+            box.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+            box.style.borderColor = '#F59E0B';
+            box.style.color = '#FCD34D';
+            box.innerHTML = '⚠️ <strong>לא נמצאו הקלטות:</strong><br>' + result.message;
+          } else {
+            box.className = 'status-success';
+            box.innerHTML = '✅ <strong>הסיכום הושלם בהצלחה!</strong><br>' + (result.message || 'מסמך הסיכום נשמר ב-Google Drive ונשלח ישירות למייל.');
+          }
         } else {
           box.className = 'status-error';
           box.innerHTML = '❌ <strong>שגיאה בעיבוד:</strong> ' + (result.error || 'שגיאה לא ידועה');

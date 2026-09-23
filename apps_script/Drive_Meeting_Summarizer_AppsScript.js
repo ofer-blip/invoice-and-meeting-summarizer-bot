@@ -470,12 +470,34 @@ function checkAndSummarizeMeetings(clientCategory) {
     archiveFolder = getOrCreateSubFolder(baseArchiveFolder, clientCategory);
   }
   
+  var allFiles = [];
+  
+  // Get files from root folder
   var files = inputFolder.getFiles();
+  while (files.hasNext()) {
+    var f = files.next();
+    f.manual_category = null; // Mark as root
+    allFiles.push(f);
+  }
+  
+  // Get files from subfolders
+  var subFolders = inputFolder.getFolders();
+  while (subFolders.hasNext()) {
+    var subFolder = subFolders.next();
+    var catName = subFolder.getName();
+    var subFiles = subFolder.getFiles();
+    while (subFiles.hasNext()) {
+      var sf = subFiles.next();
+      sf.manual_category = catName;
+      allFiles.push(sf);
+    }
+  }
+
   var processedCount = 0;
   var lastFileName = "";
   
-  while (files.hasNext()) {
-    var file = files.next();
+  for (var i = 0; i < allFiles.length; i++) {
+    var file = allFiles[i];
     var fileName = file.getName();
     var mimeType = file.getMimeType();
     
@@ -515,6 +537,8 @@ function checkAndSummarizeMeetings(clientCategory) {
       var category = "גפ\"ן";
       if (clientCategory && clientCategory !== "auto" && clientCategory !== "D-Dialog") {
         category = clientCategory;
+      } else if (file.manual_category) {
+        category = file.manual_category;
       } else {
         category = extractCategoryFromText(summaryText);
       }
@@ -546,7 +570,8 @@ function checkAndSummarizeMeetings(clientCategory) {
       var masterDocLabel = (category === "עסקים") ? "💼 פתח ריכוז פגישות עסקיות" : "📋 פתח ריכוז פגישות גפ\"ן";
       
       // 7. Move original recording to Archive folder
-      file.moveTo(archiveFolder);
+      var targetArchiveFolder = getOrCreateSubFolder(baseArchiveFolder, category);
+      file.moveTo(targetArchiveFolder);
       
       // 8. Send Summary Email
       var recipient = NOTIFICATION_EMAIL || Session.getActiveUser().getEmail();

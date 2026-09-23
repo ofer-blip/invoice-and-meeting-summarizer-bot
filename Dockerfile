@@ -7,6 +7,7 @@ ENV PYTHONUNBUFFERED True
 ENV APP_HOME /app
 WORKDIR $APP_HOME
 COPY src/ $APP_HOME/
+COPY docs/ $APP_HOME/docs/
 COPY requirements.txt $APP_HOME/
 
 # Install dependencies.

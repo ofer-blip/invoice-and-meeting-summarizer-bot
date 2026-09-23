@@ -97,32 +97,50 @@ def move_file_to_folder(service, file_id, source_folder_id, dest_folder_id):
         print(f"שגיאה בהעברת הקובץ לארכיון: {e}")
         return False
 
-def sync_all_users():
+_sync_in_progress = False
+
+def sync_all_users(force_category=None):
     """Loops through all active clients in Firestore and syncs their recordings."""
-    print("=" * 60)
-    print("מתחיל סנכרון רב-משתמשים (SaaS)")
-    print("=" * 60)
-    
-    users = google_auth.get_all_active_users()
-    if not users:
-        print("לא נמצאו משתמשים פעילים במערכת.")
+    global _sync_in_progress
+    if _sync_in_progress:
+        print("⚠️ סנכרון כבר רץ ברקע. ממתין לסיום הריצה הנוכחית כדי למנוע כפילות.")
+        import time
+        while _sync_in_progress:
+            time.sleep(2)
         return
         
-    for email in users:
-        print(f"\n[{email}] מתחיל סנכרון...")
-        creds = google_auth.get_credentials_for_user(email)
-        if not creds:
-            print(f"[{email}] ⚠️ שגיאה בטעינת הרשאות.")
-            continue
-        try:
-            sync_and_process_recordings(creds, email)
-        except Exception as e:
-            print(f"[{email}] ❌ שגיאה כללית: {e}")
-            import traceback
-            traceback.print_exc()
+    _sync_in_progress = True
+    total_processed = 0
+    total_found = 0
+    try:
+        print("=" * 60)
+        print("מתחיל סנכרון רב-משתמשים (SaaS)")
+        print("=" * 60)
+        
+        users = google_auth.get_all_active_users()
+        if not users:
+            print("לא נמצאו משתמשים פעילים במערכת.")
+            return 0, 0
+            
+        for email in users:
+            print(f"\n[{email}] מתחיל סנכרון...")
+            creds = google_auth.get_credentials_for_user(email)
+            if not creds:
+                print(f"[{email}] ⚠️ שגיאה בטעינת הרשאות.")
+                continue
+            try:
+                found, processed = sync_and_process_recordings(creds, email, force_category=force_category)
+                total_found += found
+                total_processed += processed
+            except Exception as e:
+                print(f"[{email}] ❌ שגיאה כללית: {e}")
+                import traceback
+                traceback.print_exc()
+    finally:
+        _sync_in_progress = False
+    return total_found, total_processed
 
-
-def sync_and_process_recordings(creds=None, user_email="Local User"):
+def sync_and_process_recordings(creds=None, user_email="Local User", force_category=None):
     print("\n" + "=" * 60)
     print(f"עיבוד עבור משתמש: {user_email}")
     print("=" * 60)
@@ -177,17 +195,39 @@ def sync_and_process_recordings(creds=None, user_email="Local User"):
         f['manual_category'] = None
         files_to_process.append(f)
         
-    # Query files in subfolders (Manual)
+    # Query files in configured subfolders (Manual / Subfolder routing)
+    scanned_folder_ids = set()
     for folder_id, cat_name in input_subfolders.items():
+        scanned_folder_ids.add(folder_id)
         query_sub = f"'{folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
         results_sub = drive_svc.files().list(q=query_sub, fields="files(id, name, size, mimeType, createdTime, parents)").execute()
         for f in results_sub.get('files', []):
             mime_type = f.get('mimeType', '')
             if mime_type.startswith('image/') or mime_type.startswith('text/') or mime_type == 'application/pdf':
-                print(f"   [Skipping] Non-media file found in '{cat_name}': {f.get('name')} ({mime_type})")
                 continue
             f['manual_category'] = cat_name
             files_to_process.append(f)
+            
+    # Fallback: Query files in any other unconfigured subfolders dynamically
+    query_subfolders = f"'{input_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    try:
+        subfolders_results = drive_svc.files().list(q=query_subfolders, fields="files(id, name)").execute()
+        for subfolder in subfolders_results.get('files', []):
+            folder_id = subfolder['id']
+            if folder_id in scanned_folder_ids:
+                continue
+                
+            cat_name = subfolder['name']
+            query_sub = f"'{folder_id}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false"
+            results_sub = drive_svc.files().list(q=query_sub, fields="files(id, name, size, mimeType, createdTime, parents)").execute()
+            for f in results_sub.get('files', []):
+                mime_type = f.get('mimeType', '')
+                if mime_type.startswith('image/') or mime_type.startswith('text/') or mime_type == 'application/pdf':
+                    continue
+                f['manual_category'] = cat_name
+                files_to_process.append(f)
+    except Exception as e:
+        print(f"Error querying dynamic subfolders: {e}")
             
     if not files_to_process:
         print(f"\n📂 לא נמצאו הקלטות חדשות לעיבוד.")
@@ -205,6 +245,8 @@ def sync_and_process_recordings(creds=None, user_email="Local User"):
         file_id = f['id']
         file_name = f['name']
         manual_category = f.get('manual_category')
+        if force_category and force_category != 'auto':
+            manual_category = force_category
         parent_id = f.get('parents', [input_folder_id])[0]
         
         print("\n" + "-" * 50)
@@ -235,6 +277,14 @@ def sync_and_process_recordings(creds=None, user_email="Local User"):
                 
             print(f"   [Billing] משך הקובץ: {duration_mins:.1f} דקות. (יתרה לפני: {billing_info['minutes_limit'] - billing_info['minutes_used']:.1f} דק')")
             # --- End Billing Check ---
+            
+            # --- Early Archive (Locking Mechanism) ---
+            print("\n  [נעילת קובץ] מעביר את הקובץ המקורי לארכיון ב-Drive לפני תחילת העיבוד כדי למנוע הרצה כפולה...")
+            move_success = move_file_to_folder(drive_svc, file_id, parent_id, archive_folder_id)
+            if not move_success:
+                print(f"❌ הקובץ {file_name} לא הועבר לארכיון (ייתכן וכבר מעובד בתהליך מקביל). מדלג.")
+                continue
+            # ----------------------------------------
             
             # 2. Summarize with Gemini
             html_output_path = meeting_summarizer.summarize_audio_file(
@@ -318,10 +368,7 @@ def sync_and_process_recordings(creds=None, user_email="Local User"):
                 
             print(f"   ✓ כל קובצי הסיכום נשמרו ב-Drive בתיקיית '{config.DRIVE_MEETINGS_OUTPUT_FOLDER}/{category}'")
             
-            # 4. Move original audio file to archive folder in Drive
-            print("\n4. מעביר את קובץ ההקלטה המקורי לארכיון ב-Drive...")
-            move_file_to_folder(drive_svc, file_id, parent_id, archive_folder_id)
-            print("   ✓ הקובץ הועבר בהצלחה לארכיון.")
+            # (הקובץ המקורי כבר הועבר לארכיון בהתחלה כדי למנוע כפילויות)
             
             # 5. Send Email with Summary
             print("\n5. שולח מייל עם הסיכום המלא...")
@@ -345,9 +392,26 @@ def sync_and_process_recordings(creds=None, user_email="Local User"):
                 recipient = profile.get('emailAddress', 'me')
                 
             subject = f"סיכום פגישה: {file_name}"
-            email_sent = gmail_service.send_summary_email(gmail_svc, recipient, subject, html_body)
+            
+            attachment_paths = []
+            if os.path.exists(actual_md_path):
+                attachment_paths.append(actual_md_path)
+            
+            # Use the local pdf file that was saved earlier
+            if 'pdf_output_path' in locals() and os.path.exists(pdf_output_path):
+                attachment_paths.append(pdf_output_path)
+                
+            transcript_md_path = getattr(html_output_path, 'transcript_md_path', None)
+            if transcript_md_path and os.path.exists(transcript_md_path):
+                attachment_paths.append(transcript_md_path)
+                
+            transcript_html_path = getattr(html_output_path, 'transcript_html_path', None)
+            if transcript_html_path and os.path.exists(transcript_html_path):
+                attachment_paths.append(transcript_html_path)
+                
+            email_sent = gmail_service.send_summary_email(gmail_svc, recipient, subject, html_body, attachment_paths)
             if email_sent:
-                print(f"   ✓ המייל נשלח בהצלחה אל: {recipient}")
+                print(f"   ✓ המייל נשלח בהצלחה אל: {recipient} עם {len(attachment_paths)} קבצים מצורפים.")
             else:
                 print(f"   ⚠️ לא ניתן היה לשלוח מייל אל {recipient}.")
                 
@@ -371,6 +435,7 @@ def sync_and_process_recordings(creds=None, user_email="Local User"):
     print("\\n" + "=" * 60)
     print(f"סיום סנכרון: עובדו בהצלחה {processed_count} מתוך {len(files_to_process)} הקלטות.")
     print("=" * 60)
+    return len(files_to_process), processed_count
 
 if __name__ == "__main__":
     try:

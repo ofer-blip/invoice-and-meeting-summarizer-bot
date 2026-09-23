@@ -21,48 +21,45 @@ PROMPT_MEETING_SUMMARY = """
 """
 
 DEFAULT_STRUCTURE = """
-אנא בנה את הסיכום לפי המבנה המדויק הבא:
+אנא בנה את הסיכום לפי המבנה המדויק הבא. השתמש בסימון Markdown ליצירת כותרות, רשימות והדגשות.
 
-# סיכום פגישה: [נושא הפגישה המרכזי]
+# 📄 סיכום פגישה: [נושא הפגישה המרכזי]
 
-**תאריך ושעה:** [תאריך ושעת הפגישה]
-**קטגוריה:** [{CATEGORIES_PLACEHOLDER}]
-**משתתפים/דוברים שזוהו:** [שמות הדוברים או תפקידים שזוהו במהלך השיחה]
-**נושא מרכזי:** [משפט אחד שמסביר את מהות הפגישה]
+* **תאריך:** [תאריך ושעת הפגישה]
+* **נכחו/משתתפים:** [שמות הדוברים או תפקידים שזוהו במהלך השיחה]
+* **נושא מרכזי:** [משפט אחד שמסביר את מהות הפגישה]
+* **קטגוריה:** [{CATEGORIES_PLACEHOLDER}]
+* **מקור:** קובץ שמע / פגישת עבודה
 
----
+## 1. נושא השיחה המרכזי
+[2-3 פסקאות קצרות וממוקדות שמסבירות את הרקע והצורך שעלו בשיחה. ענה על השאלות: במה עוסקת הפגישה? מה מטרתה המרכזית?]
 
-## 1. תקציר מנהלים (Executive Summary)
-[2-3 פסקאות קצרות וממוקדות שמסבירות את הרקע, הצורך והכיוונים המרכזיים].
+## 2. פירוט הפרויקטים / הנושאים שנידונו
+(קצר ותמצת! חלק לנושאי משנה לפי מה שעלה. עבור כל תת-נושא השתמש בנקודות - Bullets - כשהמילה או המילים הראשונות מודגשות):
 
-## 2. נקודות מפתח ונושאים שנדונו
-(קצר ותמצת! הקפד להתחיל שורה חדשה לכל נקודה עם כוכבית):
+* **[תת-נושא 1]:** [הסבר קצר על מה שנידון תחת נושא זה]
+* **[תת-נושא 2]:** [הסבר קצר על מה שנידון תחת נושא זה]
 
-* **[נושא 1]:** [משפט תמציתי קצרצר על מה שנדון]
-* **[נושא 2]:** [משפט תמציתי קצרצר על מה שנדון]
-* **[נושא 3]:** [משפט תמציתי קצרצר על מה שנדון]
+## 3. כלים ופתרונות להמשך (אם רלוונטי)
+(במידה ועלו כלים טכנולוגיים, אוטומציות או פתרונות קונקרטיים במהלך השיחה):
 
-## 3. החלטות שהתקבלו
-(רשימה ממוספרת שבה כל החלטה מופיעה בשורה נפרדת לחלוטין):
-1. **[החלטה ראשונה]:** [פירוט קצר של מה שהוחלט]
-2. **[החלטה שנייה]:** [פירוט קצר של מה שהוחלט]
+* **[שם הכלי/הפתרון]:** [מהות הכלי והשימוש בו כפי שעלה בשיחה]
 
-## 4. משימות לביצוע ותוכנית פעולה (Action Items)
-(הצג בטבלה פשוטה):
-
-| משימה | באחריות | יעד / הערות |
-| :--- | :---: | :---: |
-| [תיאור משימה קצר] | [שם האחראי] | [יעד או הערה] |
-| [תיאור משימה קצר] | [שם האחראי] | [יעד או הערה] |
-
-## 5. תובנות ודגשים להמשך
+## 4. תפיסה ועקרונות עבודה (תובנות מהשיחה)
 (הקפד שכל תובנה תהיה בנקודה נפרדת בשורה משלה):
 
-* **[תובנה 1]:** [דגש, הזדמנות או נושא למעקב]
-* **[תובנה 2]:** [דגש, הזדמנות או נושא למעקב]
+* **[תובנה 1]:** [דגש, גישה או נושא עקרוני שעלה מתוך הדיון]
+* **[תובנה 2]:** [דגש, גישה או נושא עקרוני שעלה מתוך הדיון]
+
+## 5. החלטות ומשימות לביצוע
+(במידה ויש משימות קונקרטיות או צעדים להמשך, הצג אותן בצורה ברורה):
+
+1. **[שם האחראי]:** [תיאור המשימה או ההחלטה]
+2. **[שם האחראי]:** [תיאור המשימה או ההחלטה]
 
 ---
-*הערה: שמור על עברית טבעית, מקצועית וברורה, תוך הקפדה חמורה על ירידת שורה בכל פעם שמתחילים נקודה חדשה.*
+בברכה,
+עופר
 """
 
 
@@ -103,45 +100,103 @@ def generate_html_summary(md_content, title, source_filename):
 <head>
     <meta charset="UTF-8">
     <title>{title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         body {{
-            font-family: Arial, sans-serif;
+            font-family: 'Heebo', sans-serif;
             background-color: #ffffff;
-            color: #000000;
+            color: #1f2937;
             direction: rtl;
             text-align: right;
-            line-height: 1.6;
-            padding: 20px;
+            line-height: 1.7;
+            padding: 40px 20px;
         }}
         .container {{
             max-width: 800px;
             margin: 0 auto;
         }}
-        h1, h2, h3 {{ color: #111827; margin-top: 20px; }}
+        .logo-header {{
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1E40AF;
+        }}
+        .logo-header img {{
+            max-height: 100px;
+            margin-bottom: 15px;
+        }}
+        .logo-header h2 {{
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }}
+        h1 {{
+            color: #1E40AF;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #E5E7EB;
+            padding-bottom: 10px;
+        }}
+        h2 {{
+            color: #1E40AF;
+            font-size: 22px;
+            font-weight: 700;
+            margin-top: 35px;
+            margin-bottom: 15px;
+        }}
+        h3 {{
+            color: #374151;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 25px;
+        }}
+        p {{
+            margin-bottom: 16px;
+        }}
+        ul, ol {{
+            margin-bottom: 20px;
+            padding-right: 25px;
+            padding-left: 0;
+        }}
+        li {{
+            margin-bottom: 12px;
+        }}
+        strong {{
+            color: #111827;
+        }}
+        hr {{
+            border: 0;
+            border-top: 1px solid #E5E7EB;
+            margin: 30px 0;
+        }}
         table {{
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
-            font-size: 14px;
+            font-size: 15px;
         }}
         th, td {{
-            border: 1px solid #d1d5db;
-            padding: 12px;
+            border: 1px solid #D1D5DB;
+            padding: 12px 16px;
             text-align: right;
         }}
         th {{
-            background-color: #f3f4f6;
-            font-weight: bold;
-            color: #374151;
+            background-color: #F3F4F6;
+            font-weight: 700;
+            color: #1F2937;
         }}
-        tr:nth-child(even) {{ background-color: #f9fafb; }}
-        hr {{ border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0; }}
-        a {{ color: #2563eb; text-decoration: none; }}
-        a:hover {{ text-decoration: underline; }}
+        tr:nth-child(even) {{
+            background-color: #F9FAFB;
+        }}
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="logo-header">
+            <!-- ניתן להחליף את כתובת התמונה בלוגו הרשמי של טמפלט הסיכומים -->
+            <img src="https://ddialog-meetings.web.app/icon-512.png" alt="הדיאלוג הדיגיטלי" style="width: 80px; height: 80px; border-radius: 16px;">
+            <h2>הדיאלוג הדיגיטלי - סיכום פגישה</h2>
+        </div>
         {html_body}
     </div>
 </body>
@@ -323,16 +378,16 @@ def summarize_audio_file(audio_path, display_name=None, categories=None, manual_
     os.makedirs(SUMMARIES_DIR, exist_ok=True)
     
     # Check if transcription is requested
-    should_transcribe = False
+    should_transcribe = True
     if manual_category:
         for c in categories:
             if isinstance(c, dict) and c.get("name") == manual_category:
-                should_transcribe = c.get("transcribe", False)
+                should_transcribe = c.get("transcribe", True)
                 break
     else:
         # Default to the first category (General) if dropped in root
         if categories and isinstance(categories[0], dict):
-            should_transcribe = categories[0].get("transcribe", False)
+            should_transcribe = categories[0].get("transcribe", True)
             
     transcript_md = None
     transcript_data = None

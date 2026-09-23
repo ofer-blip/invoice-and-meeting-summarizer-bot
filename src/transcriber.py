@@ -1,4 +1,4 @@
-﻿import os
+import os
 import requests
 import time
 import json
@@ -10,7 +10,7 @@ def transcribe_and_diarize(audio_path):
         print("⚠️ שגיאה: לא הוגדר מפתח Deepgram ב-config.py")
         return None, None
         
-    url = "https://api.deepgram.com/v1/listen?model=nova-2&language=he&diarize=true&smart_format=true"
+    url = "https://api.deepgram.com/v1/listen?model=general&tier=nova-3&language=he&diarize=true&smart_format=true"
     headers = {
         "Authorization": f"Token {api_key}"
     }
@@ -68,7 +68,7 @@ def _format_diarization(data):
 def get_html_transcript(transcript_md, title):
     import re
     html_body = transcript_md.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    html_body = re.sub(r'\*\*(.+?):\*\*', r'<strong>:</strong>', html_body)
+    html_body = re.sub(r'\*\*(.+?):\*\*', r'<strong>\1:</strong>', html_body)
     paragraphs = [f"<p>{p.strip()}</p>" for p in html_body.split('\n\n') if p.strip()]
     template = f'''<!DOCTYPE html>
 <html lang="he" dir="rtl">

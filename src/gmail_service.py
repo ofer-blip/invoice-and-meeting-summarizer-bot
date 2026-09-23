@@ -147,14 +147,28 @@ def get_email_body(message_details):
         return res # returns (body_text, mime_type)
     return "", "text/plain"
 
-def send_summary_email(service, recipient_email, subject, html_content):
-    """Sends an HTML email notification using Gmail API."""
+def send_summary_email(service, recipient_email, subject, html_content, attachment_paths=None):
+    """Sends an HTML email notification with optional attachments using Gmail API."""
     from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.application import MIMEApplication
     import base64
+    import os
+    
     try:
-        message = MIMEText(html_content, 'html', 'utf-8')
+        message = MIMEMultipart()
         message['to'] = recipient_email
         message['subject'] = subject
+        
+        message.attach(MIMEText(html_content, 'html', 'utf-8'))
+        
+        if attachment_paths:
+            for path in attachment_paths:
+                if os.path.exists(path):
+                    with open(path, 'rb') as f:
+                        part = MIMEApplication(f.read(), Name=os.path.basename(path))
+                    part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(path))
+                    message.attach(part)
         
         # Base64 encode the message
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')

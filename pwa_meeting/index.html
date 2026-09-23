@@ -133,6 +133,10 @@
       <span>🎙️</span> <span>סכם פגישות עכשיו</span>
     </button>
     
+    <a href="/dashboard" class="direct-link-btn" style="margin-bottom: 12px; margin-top: 12px;">
+      <span>⚙️</span> <span>הגדרות וניהול תיקיות</span>
+    </a>
+    
     <a id="directLink" href="#" target="_blank" class="direct-link-btn">
       <span>↗️</span> <span>הגדרות מערכת (Dashboard)</span>
     </a>
@@ -345,8 +349,16 @@
         btn.innerHTML = '<span>🎙️</span> <span>סכם פגישות שוב</span>';
 
         if (result && result.success) {
-          box.className = 'status-success';
-          box.innerHTML = '✅ <strong>הסיכום הושלם בהצלחה!</strong><br>' + (result.message || 'מסמך הסיכום נשמר ב-Google Drive ונשלח ישירות למייל.');
+          if (result.message && result.message.indexOf('לא נמצאו') !== -1) {
+            box.className = 'status-running'; // Or create a status-warning if preferred
+            box.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+            box.style.borderColor = '#F59E0B';
+            box.style.color = '#FCD34D';
+            box.innerHTML = '⚠️ <strong>לא נמצאו הקלטות:</strong><br>' + result.message;
+          } else {
+            box.className = 'status-success';
+            box.innerHTML = '✅ <strong>הסיכום הושלם בהצלחה!</strong><br>' + (result.message || 'מסמך הסיכום נשמר ב-Google Drive ונשלח ישירות למייל.');
+          }
         } else {
           box.className = 'status-error';
           box.innerHTML = '❌ <strong>שגיאה בעיבוד:</strong> ' + (result.error || 'שגיאה לא ידועה');

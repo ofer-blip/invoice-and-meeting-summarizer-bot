@@ -1,14 +1,14 @@
 import os
 import sys
 import json
-from flask import Flask, request, jsonify, redirect, url_for, session, render_template_string
+from flask import Flask, request, jsonify, redirect, url_for, session, render_template_string, send_from_directory
 from google.oauth2 import id_token
 from google.auth.transport import requests
 import drive_meeting_sync
 import google_auth
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "d-dialog-meeting-bot-secret-key-2026")
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html dir="rtl" lang="he">
@@ -128,20 +128,94 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             <p>פשוט גרור קבצי שמע לתיקיית <strong>"הקלטות לפענוח"</strong> ב-Drive. <br>אנחנו נתמלל, נסכם, ונארגן את הכל בתיקיית <strong>"סיכומים"</strong> - ישירות למייל שלך.</p>
             
-            <div class="action-buttons">
-                <a href="/dashboard" class="btn">הגדרות ותיקיות אישיות</a>
-                <a href="/logout" class="btn btn-secondary btn-logout">התנתק מהמערכת</a>
+            <style>
+                .sync-btn-home {
+                    background: linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%);
+                    color: white; border: none; padding: 20px 30px; border-radius: 16px;
+                    font-size: 1.2rem; font-weight: 700; cursor: pointer;
+                    width: 100%; max-width: 400px; margin: 20px auto;
+                    display: flex; align-items: center; justify-content: center;
+                    gap: 12px; box-shadow: 0 10px 25px rgba(45,212,191,0.3);
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .sync-btn-home:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(45,212,191,0.4); }
+                .sync-btn-home:disabled { opacity: 0.7; transform: none; cursor: not-allowed; }
+                .spinner-home {
+                    width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3);
+                    border-top: 3px solid #fff; border-radius: 50%; animation: spin 1s linear infinite;
+                }
+                .folders-list {
+                    background: #1E293B; border-radius: 12px; padding: 15px; margin-bottom: 20px;
+                    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+                }
+                .folder-badge {
+                    background: #0F172A; border: 1px solid #334155; padding: 6px 12px;
+                    border-radius: 20px; font-size: 0.85rem; color: #94A3B8;
+                }
+            </style>
+
+            <button id="sync-btn-home" class="sync-btn-home" onclick="runSyncHome()">
+                ✨ סנכרן וסכם פגישות עכשיו
+            </button>
+            <p style="font-size: 0.85rem; color: #64748B; text-align: center; margin-top: -10px; margin-bottom: 20px;">הסיכומים ישלחו למייל וימוינו אוטומטית לתיקיות בדרייב</p>
+
+            <div class="folders-list" id="folders-list">
+                <div style="width: 100%; text-align: center; margin-bottom: 10px; color: #fff; font-weight: 500;">התיקיות הפעילות שלך:</div>
+                <!-- Folders will be injected here via JS -->
             </div>
-            
-            <div class="video-section">
-                <h2>איך זה עובד?</h2>
-                <div class="video-card" onclick="openVideo()">
-                    <div class="play-icon">▶</div>
-                    <div>
-                        <strong style="display:block; margin-bottom: 4px;">סיווג הקלטות ומבנה תיקיות</strong>
-                        <div style="font-size: 0.9rem; color: var(--text-muted);">סרטון הדרכה קצר (01:20)</div>
-                    </div>
-                </div>
+
+            <script>
+            function runSyncHome() {
+                const btn = document.getElementById('sync-btn-home');
+                btn.innerHTML = '<div class="spinner-home"></div> מסנכרן ומעבד...';
+                btn.disabled = true;
+                
+                fetch('/sync')
+                    .then(res => res.json())
+                    .then(data => {
+                        btn.innerHTML = '✅ הסיכומים נשלחו למייל!';
+                        setTimeout(() => {
+                            btn.innerHTML = '✨ סנכרן וסכם פגישות עכשיו';
+                            btn.disabled = false;
+                        }, 5000);
+                    })
+                    .catch(err => {
+                        btn.innerHTML = '❌ שגיאה בסנכרון. נסה שוב.';
+                        setTimeout(() => {
+                            btn.innerHTML = '✨ סנכרן וסכם פגישות עכשיו';
+                            btn.disabled = false;
+                        }, 5000);
+                    });
+            }
+
+            // Fetch and display categories dynamically
+            fetch('/sync?api=categories')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.success && data.categories) {
+                        const container = document.getElementById('folders-list');
+                        if (data.categories.length === 0) {
+                            container.innerHTML += '<div class="folder-badge">לא הוגדרו תיקיות (סיווג כללי)</div>';
+                            return;
+                        }
+                        data.categories.forEach(cat => {
+                            let icon = '📁';
+                            if (cat.includes('עסק')) icon = '🏢';
+                            else if (cat.includes('גפ') || cat.includes('חינוך')) icon = '🏫';
+                            else if (cat.includes('פיתוח')) icon = '💻';
+                            
+                            const badge = document.createElement('div');
+                            badge.className = 'folder-badge';
+                            badge.textContent = icon + ' ' + cat;
+                            container.appendChild(badge);
+                        });
+                    }
+                });
+            </script>
+
+            <div class="action-buttons">
+                <a href="/dashboard" class="btn btn-secondary">ניהול תיקיות מתקדם</a>
+                <a href="/logout" class="btn btn-secondary btn-logout">התנתקות</a>
             </div>
         {% else %}
             <p>הענק למערכת הרשאות קריאה לדרייב וקבל סיכומים אוטומטיים ישירות למייל, ממוינים ומסווגים לפי הצרכים המדויקים שלך.</p>
@@ -502,16 +576,23 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 </body>
 </html>"""
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def index():
-    email = session.get('user_email')
-    return render_template_string(HTML_TEMPLATE, email=email)
+    # Serve the original PWA index.html
+    return send_from_directory('docs', 'index.html')
+
+@app.route('/<path:filename>')
+def serve_docs(filename):
+    import os
+    if os.path.exists(os.path.join('docs', filename)):
+        return send_from_directory('docs', filename)
+    return "Not found", 404
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     email = session.get('user_email')
     if not email:
-        return redirect(url_for('index'))
+        return redirect(url_for('login'))
     
     message = ""
     if request.method == 'POST':
@@ -627,25 +708,44 @@ def sync_meetings():
     if request.args.get('api') == 'categories':
         categories = set()
         try:
-            from google_auth import db
-            docs = db.collection('users').stream()
-            for doc in docs:
-                data = doc.to_dict()
-                cats = data.get('categories', [])
-                for c in cats:
-                    if isinstance(c, dict) and c.get('name'):
-                        categories.add(c.get('name'))
+            import google_auth
+            import config
+            import drive_meeting_sync
+            from googleapiclient.discovery import build
+            
+            active_users = google_auth.get_all_active_users()
+            for email in active_users:
+                creds = google_auth.get_credentials_for_user(email)
+                if creds:
+                    drive_svc = build('drive', 'v3', credentials=creds)
+                    input_folder_id = drive_meeting_sync.find_or_create_root_folder(drive_svc, config.DRIVE_MEETINGS_INPUT_FOLDER)
+                    
+                    query = f"'{input_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+                    results = drive_svc.files().list(q=query, fields="files(id, name)").execute()
+                    
+                    for f in results.get('files', []):
+                        categories.add(f.get('name'))
         except Exception as e:
-            print("Error fetching categories:", e)
+            print("Error fetching categories from Drive:", e)
+            
         response = jsonify({"success": True, "categories": list(categories)})
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response, 200
 
     try:
+        force_category = request.args.get('category')
         # Prevent timeout issues by checking if it's a pub/sub or scheduler ping
         # Cloud Run allows up to 60 mins execution if configured, but default is 5 mins.
-        drive_meeting_sync.sync_all_users()
-        response = jsonify({"success": True, "message": "Multi-tenant sync completed successfully"})
+        import drive_meeting_sync
+        found, processed = drive_meeting_sync.sync_all_users(force_category=force_category)
+        if found == 0:
+            msg = "לא נמצאו הקלטות חדשות בתיקיות."
+        elif processed == 0:
+            msg = f"נמצאו {found} הקלטות, אך כולן דולגו (ייתכן עקב חריגת מכסה או שגיאה)."
+        else:
+            msg = f"הסנכרון הושלם בהצלחה! נמצאו {found} קבצים, מתוכם עובדו {processed} הקלטות."
+            
+        response = jsonify({"success": True, "message": msg})
         response.headers.add('Access-Control-Allow-Origin', '*')
         return response, 200
     except Exception as e:
