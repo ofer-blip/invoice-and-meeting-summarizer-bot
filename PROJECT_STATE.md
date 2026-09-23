@@ -17,5 +17,5 @@
 
 ## 3. הנחיות פיתוח ומניעת רגרסיות (Anti-Regression Rules)
 * **No Patches:** Do not make isolated patches. Before modifying code, check how it affects the entire pipeline (e.g., Subfolders, Email sending).
-* **Reference State:** All stable code must be committed via Git. If a new feature breaks existing logic (e.g., double emails, ignoring subfolders), revert to the last stable reference.
+* **Reference State:** All stable code must be committed via Git. If a new feature breaks existing logic (e.g., double emails, ignoring subfolders), revert to the last stable reference using `git checkout v1.1-stable`.
 * **Single Source of Truth:** `drive_meeting_sync.py` is the only manager for sync logic. `meeting_summarizer.py` is strictly for the AI pipeline.

@@ -117,25 +117,18 @@ def generate_html_summary(md_content, title, source_filename):
         }}
         .logo-header {{
             text-align: center;
-            margin-bottom: 30px;
-            color: #1E40AF;
-        }}
-        .logo-header img {{
-            max-height: 100px;
-            margin-bottom: 15px;
-        }}
-        .logo-header h2 {{
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
+            margin-bottom: 20px;
+            color: #475569;
+            font-size: 20px;
+            font-weight: 400;
         }}
         h1 {{
             color: #1E40AF;
             font-size: 28px;
             font-weight: 700;
             margin-bottom: 20px;
-            border-bottom: 2px solid #E5E7EB;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #E5E7EB;
         }}
         h2 {{
             color: #1E40AF;
@@ -159,7 +152,7 @@ def generate_html_summary(md_content, title, source_filename):
             padding-left: 0;
         }}
         li {{
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }}
         strong {{
             color: #111827;
@@ -193,9 +186,7 @@ def generate_html_summary(md_content, title, source_filename):
 <body>
     <div class="container">
         <div class="logo-header">
-            <!-- ניתן להחליף את כתובת התמונה בלוגו הרשמי של טמפלט הסיכומים -->
-            <img src="https://ddialog-meetings.web.app/icon-512.png" alt="הדיאלוג הדיגיטלי" style="width: 80px; height: 80px; border-radius: 16px;">
-            <h2>הדיאלוג הדיגיטלי - סיכום פגישה</h2>
+            הדיאלוג הדיגיטלי - סיכום פגישה
         </div>
         {html_body}
     </div>
