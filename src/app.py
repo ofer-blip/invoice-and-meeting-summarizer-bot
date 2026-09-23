@@ -544,6 +544,12 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
                         <input type="checkbox" onchange="this.previousElementSibling.value = this.checked ? 'on' : 'off'" {% if cat.transcribe %}checked{% endif %}>
                         <label onclick="this.previousElementSibling.click()">הפק בנוסף תמלול מלא מדויק מילה-במילה (Deepgram Nova-2)</label>
                     </div>
+                    
+                    <div class="checkbox-row">
+                        <input type="hidden" name="category_ai_pipeline" value="{{ 'on' if cat.ai_pipeline else 'off' }}">
+                        <input type="checkbox" onchange="this.previousElementSibling.value = this.checked ? 'on' : 'off'" {% if cat.ai_pipeline %}checked{% endif %}>
+                        <label onclick="this.previousElementSibling.click()">הפעל שרשרת AI (מאמן, סיפור, סושיאל ותמונה) בסיום</label>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -568,6 +574,11 @@ DASHBOARD_TEMPLATE = """<!DOCTYPE html>
                     <input type="hidden" name="category_transcribe" value="off">
                     <input type="checkbox" onchange="this.previousElementSibling.value = this.checked ? 'on' : 'off'">
                     <label onclick="this.previousElementSibling.click()">הפק בנוסף תמלול מלא מדויק מילה-במילה (Deepgram Nova-2)</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="hidden" name="category_ai_pipeline" value="off">
+                    <input type="checkbox" onchange="this.previousElementSibling.value = this.checked ? 'on' : 'off'">
+                    <label onclick="this.previousElementSibling.click()">הפעל שרשרת AI (מאמן, סיפור, סושיאל ותמונה) בסיום</label>
                 </div>
             `;
             document.getElementById('categoryList').appendChild(div);
@@ -599,22 +610,25 @@ def dashboard():
         names = request.form.getlist('category_name')
         prompts = request.form.getlist('category_prompt')
         transcribes = request.form.getlist('category_transcribe')
+        ai_pipelines = request.form.getlist('category_ai_pipeline')
         
         categories = []
         for i in range(len(names)):
             name = names[i].strip()
             prompt = prompts[i].strip() if i < len(prompts) else ""
             transcribe = transcribes[i] == 'on' if i < len(transcribes) else False
+            ai_pipeline = ai_pipelines[i] == 'on' if i < len(ai_pipelines) else False
             
             if name:
                 categories.append({
                     "name": name, 
                     "prompt": prompt,
-                    "transcribe": transcribe
+                    "transcribe": transcribe,
+                    "ai_pipeline": ai_pipeline
                 })
                 
         if not categories:
-            categories = [{"name": "כללי", "prompt": "", "transcribe": False}]
+            categories = [{"name": "כללי", "prompt": "", "transcribe": False, "ai_pipeline": False}]
             
         google_auth.update_user_categories(email, categories)
         message = "ההגדרות נשמרו בהצלחה!"

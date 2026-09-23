@@ -541,10 +541,10 @@ def summarize_audio_file(audio_path, display_name=None, categories=None, manual_
     print("=" * 60)
     
     # Update local master summary file
-    try:
-        append_to_master_summary(summary_text, category, meeting_title, meeting_date)
-    except Exception as e:
-        print(f"⚠️ שגיאה בעדכון קובץ הריכוז המרכזי: {e}")
+    # try:
+    #     append_to_master_summary(summary_text, category, meeting_title, meeting_date)
+    # except Exception as e:
+    #     print(f"⚠️ שגיאה בעדכון קובץ הריכוז המרכזי: {e}")
     
     # Open HTML summary in default browser
     try:

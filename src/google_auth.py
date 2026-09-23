@@ -98,8 +98,12 @@ def get_google_credentials():
         if creds and creds.valid:
             return creds
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            return creds
+            try:
+                creds.refresh(Request())
+                return creds
+            except Exception as e:
+                print(f"Failed to refresh local token.json: {e}")
+                pass
             
     # Try active users from DB as fallback
     active_users = get_all_active_users()

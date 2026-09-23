@@ -97,6 +97,91 @@ def move_file_to_folder(service, file_id, source_folder_id, dest_folder_id):
         print(f"שגיאה בהעברת הקובץ לארכיון: {e}")
         return False
 
+def update_drive_master_summary(service, folder_id, category, summary_text, meeting_title, date_str):
+    """Updates the master summary markdown file directly on Google Drive."""
+    import re
+    from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
+    import io
+    
+    file_name = f"ריכוז_פגישות_{category}.md"
+    
+    query = f"name = '{file_name}' and '{folder_id}' in parents and trashed = false"
+    results = service.files().list(q=query, fields="files(id)").execute()
+    files = results.get('files', [])
+    
+    content = ""
+    file_id = None
+    if files:
+        file_id = files[0]['id']
+        request = service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        content = fh.getvalue().decode('utf-8')
+    else:
+        title_header = "# 💼 ריכוז סיכומי פגישות עסקיות" if category == 'עסקים' else "# 📋 ריכוז סיכומי פגישות עבודה"
+        content = f"{title_header}\n\n---\n\n## 🔗 ניווט מהיר\n\n---\n"
+        
+    if f"{meeting_title} - {date_str}" in content:
+        print(f"ℹ️ הפגישה '{meeting_title}' כבר קיימת בקובץ הריכוז ב-Drive.")
+        return
+        
+    nav_pattern = r'## 🔗 ניווט מהיר\s*\n((?:(?:\d+\.|\*)\s*\[.+?\]\(.+?\)\s*\n*)*)'
+    match = re.search(nav_pattern, content)
+    
+    current_items = []
+    if match:
+        nav_block = match.group(1)
+        current_items = re.findall(r'(\d+)\.\s*\[.+?\]\(.+?\)', nav_block)
+        
+    next_idx = len(current_items) + 1
+    clean_anchor = re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]+', '-', f"{next_idx}-{meeting_title}-{date_str}").strip('-').lower()
+    nav_entry = f"{next_idx}. [{meeting_title} ({date_str})](#{clean_anchor})"
+    
+    lines = summary_text.strip().splitlines()
+    body_lines = []
+    skip_header = True
+    for line in lines:
+        if skip_header and (line.startswith("# ") or line.startswith("**נושא")):
+            continue
+        if skip_header and line.strip() == "---":
+            skip_header = False
+            continue
+        if not skip_header:
+            if line.startswith("## "):
+                body_lines.append("#" + line)
+            else:
+                body_lines.append(line)
+                
+    formatted_body = "\n".join(body_lines).strip()
+    entry_text = f"\n\n---\n\n## {next_idx}. {meeting_title} - {date_str}\n\n{formatted_body}\n"
+    
+    if match:
+        if nav_block.strip():
+            new_nav_block = nav_block.rstrip() + f"\n{nav_entry}\n"
+        else:
+            new_nav_block = f"{nav_entry}\n"
+        content = content[:match.start(1)] + new_nav_block + content[match.end(1):]
+    else:
+        content = content + f"\n## 🔗 ניווט מהיר\n{nav_entry}\n\n---\n"
+        
+    content = content.rstrip() + entry_text
+    
+    file_metadata = {'name': file_name}
+    media = MediaIoBaseUpload(io.BytesIO(content.encode('utf-8')), mimetype='text/markdown', resumable=True)
+    
+    try:
+        if file_id:
+            service.files().update(fileId=file_id, media_body=media).execute()
+        else:
+            file_metadata['parents'] = [folder_id]
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(f"   ✓ קובץ הריכוז '{file_name}' עודכן ב-Google Drive בהצלחה.")
+    except Exception as e:
+        print(f"   ⚠️ שגיאה בעדכון קובץ הריכוז ב-Drive: {e}")
+
 _sync_in_progress = False
 
 def sync_all_users(force_category=None):
@@ -415,6 +500,37 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
             else:
                 print(f"   ⚠️ לא ניתן היה לשלוח מייל אל {recipient}.")
                 
+            # Update master summary on Drive
+            try:
+                meeting_title = getattr(html_output_path, 'meeting_title', file_name)
+                date_str = getattr(html_output_path, 'date_str', '')
+                summary_text = getattr(html_output_path, 'summary_text', '')
+                update_drive_master_summary(drive_svc, output_folder_id, category, summary_text, meeting_title, date_str)
+            except Exception as e:
+                print(f"   ⚠️ שגיאה בקריאה לעדכון הריכוז: {e}")
+                
+            # Extended AI Pipeline
+            should_run_ai = False
+            if '[AI]' in file_name.upper() or category == 'גפ"ן':
+                should_run_ai = True
+            else:
+                for cat in categories:
+                    if isinstance(cat, dict) and cat.get("name") == category:
+                        should_run_ai = cat.get("ai_pipeline", False)
+                        break
+
+            if should_run_ai:
+                print(f"\n🚀 מזהה בקשה לשרשרת AI (לפי הגדרת תיקייה או שם קובץ) - מתחיל...")
+                import post_meeting_pipeline
+                post_meeting_pipeline.run_extended_pipeline(
+                    drive_svc=drive_svc,
+                    target_category_folder_id=target_category_folder_id,
+                    actual_md_path=actual_md_path,
+                    transcript_md_path=transcript_md_path,
+                    summary_text=summary_text,
+                    upload_callback=upload_local_file_to_drive
+                )
+                    
             # Update billing usage
             google_auth.increment_user_minutes(user_email, duration_mins)
             
