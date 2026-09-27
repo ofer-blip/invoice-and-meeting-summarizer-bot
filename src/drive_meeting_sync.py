@@ -192,7 +192,7 @@ def sync_all_users(force_category=None):
         import time
         while _sync_in_progress:
             time.sleep(2)
-        return
+        return 0, 0
         
     _sync_in_progress = True
     total_processed = 0
@@ -316,7 +316,7 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
             
     if not files_to_process:
         print(f"\n📂 לא נמצאו הקלטות חדשות לעיבוד.")
-        return
+        return 0, 0
         
     print(f"\nנמצאו {len(files_to_process)} הקלטות לעיבוד:")
     for i, f in enumerate(files_to_process, 1):
@@ -364,11 +364,20 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
             # --- End Billing Check ---
             
             # --- Early Archive (Locking Mechanism) ---
-            print("\n  [נעילת קובץ] מעביר את הקובץ המקורי לארכיון ב-Drive לפני תחילת העיבוד כדי למנוע הרצה כפולה...")
+            print("\n  [נעילת קובץ ב-Firestore] נועל את הקובץ במסד הנתונים כדי למנוע הרצה כפולה...")
+            import time
+            try:
+                db = google_auth.db
+                doc_ref = db.collection('processed_recordings_locks').document(file_id)
+                doc_ref.create({'locked_at': str(time.time()), 'filename': file_name})
+            except Exception as e:
+                print(f"❌ הקובץ {file_name} כבר מעובד בתהליך מקביל (נמצא בנעילה). מדלג.")
+                continue
+
+            print("  [נעילת קובץ ב-Drive] מעביר את הקובץ המקורי לארכיון...")
             move_success = move_file_to_folder(drive_svc, file_id, parent_id, archive_folder_id)
             if not move_success:
-                print(f"❌ הקובץ {file_name} לא הועבר לארכיון (ייתכן וכבר מעובד בתהליך מקביל). מדלג.")
-                continue
+                print(f"⚠️ הקובץ {file_name} לא הועבר לארכיון, אבל הסטטוס ננעל בהצלחה.")
             # ----------------------------------------
             
             # 2. Summarize with Gemini
@@ -397,10 +406,7 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
             actual_html_path = getattr(html_output_path, 'html_path', str(html_output_path))
             actual_md_path = getattr(html_output_path, 'md_path', md_output_path)
 
-            # HTML raw upload skipped based on user request
-            # uploaded_html = upload_local_file_to_drive(drive_svc, actual_html_path, target_category_folder_id, 'text/html')
-            if os.path.exists(actual_md_path):
-                upload_local_file_to_drive(drive_svc, actual_md_path, target_category_folder_id, 'text/markdown')
+            # MD and HTML raw upload skipped based on user request
                 
             transcript_html_path = getattr(html_output_path, 'transcript_html_path', None)
             
@@ -440,14 +446,8 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
                 with open(pdf_output_path, 'wb') as pf:
                     pf.write(pdf_bytes)
                     
-                # 3d. Upload PDF back to Drive
-                pdf_metadata = {
-                    'name': f"{file_name_no_ext}.pdf",
-                    'parents': [target_category_folder_id]
-                }
-                pdf_media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf', resumable=True)
-                drive_svc.files().create(body=pdf_metadata, media_body=pdf_media, fields='id').execute()
-                print("   ✓ קובצי Google Doc ו-PDF נוצרו ונשמרו בהצלחה ב-Drive.")
+                # (PDF is saved locally to attach to email, but we won't upload it back to Drive based on user request)
+                print("   ✓ קובץ Google Doc נוצר ונשמר בהצלחה ב-Drive.")
             except Exception as pdf_ex:
                 print(f"   ⚠️ שגיאה ביצירת Doc/PDF: {pdf_ex}")
                 
@@ -479,20 +479,10 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
             subject = f"סיכום פגישה: {file_name}"
             
             attachment_paths = []
-            if os.path.exists(actual_md_path):
-                attachment_paths.append(actual_md_path)
             
             # Use the local pdf file that was saved earlier
             if 'pdf_output_path' in locals() and os.path.exists(pdf_output_path):
                 attachment_paths.append(pdf_output_path)
-                
-            transcript_md_path = getattr(html_output_path, 'transcript_md_path', None)
-            if transcript_md_path and os.path.exists(transcript_md_path):
-                attachment_paths.append(transcript_md_path)
-                
-            transcript_html_path = getattr(html_output_path, 'transcript_html_path', None)
-            if transcript_html_path and os.path.exists(transcript_html_path):
-                attachment_paths.append(transcript_html_path)
                 
             email_sent = gmail_service.send_summary_email(gmail_svc, recipient, subject, html_body, attachment_paths)
             if email_sent:
@@ -547,6 +537,20 @@ def sync_and_process_recordings(creds=None, user_email="Local User", force_categ
                     os.remove(temp_file_path)
                 except Exception:
                     pass
+            # Clean up generated local files
+            try:
+                if 'actual_md_path' in locals() and os.path.exists(actual_md_path):
+                    os.remove(actual_md_path)
+                if 'actual_html_path' in locals() and os.path.exists(actual_html_path):
+                    os.remove(actual_html_path)
+                if 'transcript_md_path' in locals() and transcript_md_path and os.path.exists(transcript_md_path):
+                    os.remove(transcript_md_path)
+                if 'transcript_html_path' in locals() and transcript_html_path and os.path.exists(transcript_html_path):
+                    os.remove(transcript_html_path)
+                if 'pdf_output_path' in locals() and os.path.exists(pdf_output_path):
+                    os.remove(pdf_output_path)
+            except Exception:
+                pass
                     
     print("\\n" + "=" * 60)
     print(f"סיום סנכרון: עובדו בהצלחה {processed_count} מתוך {len(files_to_process)} הקלטות.")
